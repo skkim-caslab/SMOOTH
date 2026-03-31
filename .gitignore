@@ -1,0 +1,8 @@
+
+# Simulation temp files
+src/policies/*/SRAM/sram_*
+src/policies/*/Tiles/remained_tile_list_*
+src/policies/*/Tiles/whole_tile_list_*
+src/policies/*/systolic_array_model/temp/
+src/policies/*/tmp_out
+src/policies/*/*.out

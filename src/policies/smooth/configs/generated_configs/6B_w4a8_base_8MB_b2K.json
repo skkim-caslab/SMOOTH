@@ -1,0 +1,6 @@
+{
+  "quant": "w4a8",
+  "flash_attention": false,
+  "sram_size": "8MB",
+  "block_size": "2048"
+}

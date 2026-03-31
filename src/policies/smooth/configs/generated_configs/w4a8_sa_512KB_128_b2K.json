@@ -1,0 +1,7 @@
+{
+  "quant": "w4a8",
+  "flash_attention": false,
+  "sram_size": "512KB",
+  "output_token_length": 128,
+  "block_size": "2048"
+}

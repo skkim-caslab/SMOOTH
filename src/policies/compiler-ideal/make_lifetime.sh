@@ -1,0 +1,13 @@
+#python update_tile_lifetime.py modified_tile_qkv_projection.json lifetime/qkv_proj_tile_lifetime_x1.json &
+#python update_tile_lifetime.py base_tile.json lifetime/base_tile_lifetime_x1.json &
+#python update_tile_lifetime.py modified_tile_all.json lifetime/all_tile_lifetime_x1.json &
+#python update_tile_lifetime.py modified_tile_flash_attention.json lifetime/flash_atten_tile_lifetime_x1.json &
+#python update_tile_lifetime.py modified_tile_ffn.json lifetime/ffn_tile_lifetime_x1.json &
+#python update_tile_lifetime.py modified_tile_qkv_attention.json lifetime/qkv_atten_tile_lifetime_x1.json &
+
+python update_tile_lifetime.py modified_test_8K_tile_qkv_projection.json lifetime/qkv_proj_tile_lifetime_test_8K_x1.json &
+python update_tile_lifetime.py base_test.json lifetime/base_tile_lifetime_test_8K_x1.json &
+python update_tile_lifetime.py modified_test_8K_tile_all.json lifetime/all_tile_lifetime_test_8K_x1.json &
+python update_tile_lifetime.py modified_test_8K_tile_flash_attention.json lifetime/flash_atten_tile_lifetime_test_8K_x1.json &
+python update_tile_lifetime.py modified_test_8K_tile_ffn.json lifetime/ffn_tile_lifetime_test_8K_x1.json &
+python update_tile_lifetime.py modified_test_8K_tile_qkv_attention.json lifetime/qkv_atten_tile_lifetime_test_8K_x1.json &

@@ -1,0 +1,72 @@
+from software_model.sw_transformer import(
+    TransformerBlockInitComputationTP,
+    TransformerBlockAutoRegressionTP,
+)
+
+from software_model.sw_utils import data_type_dict, Tensor
+from hardware_model.hw_system import system_dict
+import sys
+import json
+
+if __name__ == "__main__":
+
+    bs = 1
+    INITFLAG = False
+
+    sram_size = "8MB"
+
+    config_file = sys.argv[2]
+    model_dim = int(sys.argv[3])
+    head_num = int(sys.argv[4])
+    INITFLAG = "--init" in sys.argv
+
+    block_size = 1024
+
+    sr_data_type = "int8"
+
+#    if quant == "w4a8":
+#        model_dim = model_dim//2
+
+    if len(sys.argv) < 3:
+        print("Usage: python script.py <config_file>")
+        sys.exit(1)
+
+    config_file = sys.argv[2]
+
+
+    print("Generation")
+
+    TPU_system = system_dict["NPU_"+sr_data_type+"_"+sram_size+"_"+str(block_size)] 
+
+    if INITFLAG == True:
+        input_token_length = int(sys.argv[1])
+        model = TransformerBlockInitComputationTP(
+            d_model = model_dim,
+            n_heads=head_num, 
+            device_count=1,
+            data_type=data_type_dict[sr_data_type],
+            system=TPU_system,
+            config_file = config_file,
+            use_flash_attention=True,
+        )
+        _ = model(
+            Tensor([bs, input_token_length, model_dim], data_type_dict[sr_data_type])
+        )
+        model.compile_and_simulate(TPU_system)
+    else:
+        input_token_length = 1024
+        output_token_length = int(sys.argv[1])
+        model = TransformerBlockAutoRegressionTP(
+            d_model = model_dim,
+            n_heads=head_num,
+            device_count=1,
+            data_type=data_type_dict[sr_data_type],
+            system=TPU_system,
+            config_file = config_file,
+            use_flash_attention=True,
+        )
+        _ = model(
+            Tensor([bs, 1, model_dim], data_type_dict[sr_data_type]), input_token_length + output_token_length
+        )
+        model.compile_and_simulate(TPU_system)
+
