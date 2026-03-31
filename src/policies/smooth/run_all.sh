@@ -18,7 +18,7 @@ MODEL_LIST=(
 
 for FILE_NAME in "${MODEL_LIST[@]}"; do
     echo "Running $FILE_NAME..."
-    python run_decode.py "$FILE_NAME" 1 &
+    python run_decode.py "$FILE_NAME" -32 &
     echo "Finished $FILE_NAME"
     echo "--------------------------"
 done
