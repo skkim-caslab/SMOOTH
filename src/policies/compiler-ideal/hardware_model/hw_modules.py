@@ -130,7 +130,6 @@ overhead_dict = {
     "A100": Overhead(2.1e-5, 1.2e-5, 4.5e-5, 4.5e-5, 2.1e-5),
     "TPUv3": Overhead(11e-2, 30e-2, 14e-2, 10e-2, 11e-2),
     "NPU": Overhead(0,0,0,0,0),
-#    "NPU": Overhead(11e-2, 30e-2, 14e-2, 10e-2),
     "MI210": Overhead(3.4e-5, 2.2e-5, 2.8e-5, 2.1e-5, 3.4e-5),
 }
 
@@ -188,7 +187,7 @@ compute_module_dict = {
         1,
         940e6,
         12 * 1024**3, ##LPDDR5
-        8, ##MemBW
+        32, ##MemBW
         overhead_dict["NPU"],
     ),
     "NPU_fp16": ComputeModule(

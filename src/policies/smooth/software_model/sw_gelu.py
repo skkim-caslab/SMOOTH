@@ -79,8 +79,11 @@ class GeLU(Operator):
             total_io_count / pcb_module.io_module.bandwidth
             + total_io_count
             / pcb_module.compute_module.l2_bandwidth_per_cycle
-#            / pcb_module.compute_module.clock_freq
+            / pcb_module.compute_module.clock_freq
         )
+        print("DEBUG SKKIM",total_io_count, pcb_module.io_module.bandwidth, pcb_module.compute_module.l2_bandwidth_per_cycle, pcb_module.compute_module.clock_freq
+, io_latency)
+
         total_flop_count = M * (
             10 + pcb_module.compute_module.core.vector_unit.flops_per_exp
         )
@@ -88,8 +91,10 @@ class GeLU(Operator):
             total_flop_count
             / pcb_module.compute_module.core.vector_unit.total_vector_flops_per_cycle
             / pcb_module.compute_module.core_count
-#           / pcb_module.compute_module.clock_freq
+           / pcb_module.compute_module.clock_freq
         )
+        compute_cycle_count = 0
+        io_cycle_count = 0
 
         if 'collect' in ops_name:
             tile.collect_tile(
@@ -120,6 +125,8 @@ class GeLU(Operator):
 
 
             compute_cycle_count = total_flop_count / pcb_module.compute_module.core.vector_unit.total_vector_flops_per_cycle
+            io_cycle_count = io_latency * pcb_module.compute_module.clock_freq
+
             loadable_amount = compute_cycle_count * pcb_module.compute_module.l2_bandwidth_per_cycle / data_type.word_size 
             if(write_or_free_ended == False):
                 remained_amount, sram_status, sram_stable = sram.write_previous_ops_from_sram(
@@ -133,11 +140,11 @@ class GeLU(Operator):
                     sram_status, sram_table, pcb_module, loadable_amount
                 )
             sram.store_sram_status(sram_status, sram_table)
-            print("total cycle(X) : ", max(compute_cycle_count, total_io_count))
+            print("total cycle(X) : ", max(compute_cycle_count, io_cycle_count))
             print("compute cycle(X1) : ", compute_cycle_count)
             print("VE cycle(X1) : ", compute_cycle_count)
-            print("io cycle(X2) : ", total_io_count)
-            print("current cycle(X3) : ", max(compute_cycle_count, total_io_count))
+            print("io cycle(X2) : ", io_cycle_count)
+            print("current cycle(X3) : ", max(compute_cycle_count, io_cycle_count))
             print("memory bw util[%](Y1) : ", 100)
             print("sram status: ", sram_status)
 #            print("sram occupancy[%](Y2) : ", sram.get_sramutil(sram_status) / pcb_module.compute_module.core.SRAM_size *100)
@@ -145,7 +152,7 @@ class GeLU(Operator):
             print("va util[%](Y3) : ", 100)
 
 
-        return max(compute_cycle_count, total_io_count)
+        return max(compute_cycle_count, io_cycle_count)
 
     def run_on_gpu(self):
         assert self.shape is not None

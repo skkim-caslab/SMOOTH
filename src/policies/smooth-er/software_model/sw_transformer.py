@@ -378,6 +378,22 @@ class TransformerBlockInitComputationTP(Operator):
                 + h2_matmul2_latency
                 + ffn_allreduce_latency
             )
+            print("===== Latency Breakdown =====")
+            print(f"q_proj_latency        : {q_proj_latency}")
+            print(f"k_proj_latency        : {k_proj_latency}")
+            print(f"v_proj_latency        : {v_proj_latency}")
+            print(f"mha_layernorm_latency : {mha_layernorm_latency}")
+            print(f"flash_attention       : {flash_attention_latency}")
+            print(f"h_matmul0_latency     : {h_matmul0_latency}")
+            print(f"mha_allreduce_latency : {mha_allreduce_latency}")
+            print(f"ffn_layernorm_latency : {ffn_layernorm_latency}")
+            print(f"h1_matmul1_latency    : {h1_matmul1_latency}")
+            print(f"gelu_latency          : {gelu_latency}")
+            print(f"h2_matmul2_latency    : {h2_matmul2_latency}")
+            print(f"ffn_allreduce_latency : {ffn_allreduce_latency}")
+            print(f"TOTAL latency         : {self.latency}")
+            print("==============================")
+
             print(f"Latency,   {self.latency/device.compute_module.clock_freq*24}")
         else:
             attention_latency = (

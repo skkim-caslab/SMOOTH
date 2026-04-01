@@ -27,6 +27,7 @@ def parse_file_for_latency(filename, model_name):
     """
     불필요한 utilization, cycle 데이터는 무시하고
     그래프에 필요한 seq_len과 latency만 파싱합니다.
+    seq_len = 0인 값(Prompt Latency)도 여기서 읽어옵니다.
     """
     data = []
     with open(filename, 'r') as file:
@@ -46,7 +47,8 @@ def parse_file_for_latency(filename, model_name):
 
 def collect_latencies(data, last_num):
     latencies = {}
-    for n in range(1, last_num + 1):
+    # seq_len=0 (Prompt Latency) 부터 저장
+    for n in range(0, last_num + 1):
         entry = next((e for e in data if e['seq_len'] == n), None)
         latencies[n] = entry['latency'] if entry else 0.0
     return latencies
@@ -76,7 +78,8 @@ def generate_csv(base_dir, last_num):
                 latencies = collect_latencies(data, last_num)
                 
                 latency_row = [model_name, os.path.basename(directory)]
-                for seq_len in range(1, last_num + 1):
+                # seq_len_0 추가
+                for seq_len in range(0, last_num + 1):
                     latency_row.append(latencies.get(seq_len, 0.0))
                 latency_results.append(latency_row)
 
@@ -91,7 +94,7 @@ def generate_csv(base_dir, last_num):
                     data = parse_file_for_latency(llama2_file, model_name)
                     latencies = collect_latencies(data, last_num)
                     latency_row = [model_name, os.path.basename(directory)]
-                    for seq_len in range(1, last_num + 1):
+                    for seq_len in range(0, last_num + 1):
                         latency_row.append(latencies.get(seq_len, 0.0))
                     latency_results.append(latency_row)
                 except Exception as e:
@@ -105,7 +108,7 @@ def generate_csv(base_dir, last_num):
                     data = parse_file_for_latency(llama2_quant_file, model_name)
                     latencies = collect_latencies(data, last_num)
                     latency_row = [model_name, os.path.basename(directory)]
-                    for seq_len in range(1, last_num + 1):
+                    for seq_len in range(0, last_num + 1):
                         latency_row.append(latencies.get(seq_len, 0.0))
                     latency_results.append(latency_row)
                 except Exception as e:
@@ -114,7 +117,8 @@ def generate_csv(base_dir, last_num):
     # 결과를 CSV 파일로 저장
     with open(latency_file, 'w', newline='') as f:
         writer = csv.writer(f)
-        header = ['model', 'policy'] + [f'seq_len_{i}' for i in range(1, last_num + 1)]
+        # header에 seq_len_0 추가
+        header = ['model', 'policy'] + [f'seq_len_{i}' for i in range(0, last_num + 1)]
         writer.writerow(header)
         for latency_row in latency_results:
             writer.writerow([latency_row[0], latency_row[1]] + [f"{x:.6f}" for x in latency_row[2:]])
@@ -122,71 +126,7 @@ def generate_csv(base_dir, last_num):
     print(f"Latencies saved to {latency_file}")
 
 
-def load_prompt_latencies(seq_1_dir):
-    """
-    seq_1 데이터 디렉토리에서 각각의 초기 레이턴시 값을 읽어옵니다.
-    반환 형태: {(model_name, policy_name): latency}
-    """
-    prompt_latencies = {}
-    directories = ['gemmini', 'capuchin', 'compiler-ideal', 'smooth', 'smooth-er']
-    
-    # generate_plot에서 사용하는 이름과 매핑
-    policy_map = {
-        "gemmini": "Gemmini",
-        "compiler-ideal": "Compiler-Ideal",
-        "capuchin": "Capuchin",
-        "smooth": "SMOOTH-Base",
-        "smooth-er": "SMOOTH-ER"
-    }
-
-    for policy_dir_name in directories:
-        policy_dir = os.path.join(seq_1_dir, policy_dir_name)
-        if not os.path.exists(policy_dir):
-            print(f"Warning: seq_1 Directory '{policy_dir}' not found")
-            continue
-            
-        mapped_policy = policy_map.get(policy_dir_name, policy_dir_name)
-
-        def _extract_first_latency(filename, m_name):
-            try:
-                with open(filename, 'r') as file:
-                    reader = csv.reader(file, delimiter=',')
-                    for row in reader:
-                        if len(row) >= 2:
-                            original_latency = float(row[1])
-                            layer_count = MODEL_LAYERS.get(m_name, 24)
-                            return (original_latency / 24) * layer_count
-            except:
-                pass
-            return None
-
-        # 기본 파일 파싱
-        for filename in Path(policy_dir).glob('*.out'):
-            model_name = filename.stem
-            latency = _extract_first_latency(filename, model_name)
-            if latency is not None:
-                prompt_latencies[(model_name, mapped_policy)] = latency
-
-        # 누락된 모델 처리: bloom은 llama2 차용
-        llama2_file = Path(policy_dir) / 'llama2.out'
-        if llama2_file.exists():
-            for model_name in ['bloom']:
-                latency = _extract_first_latency(llama2_file, model_name)
-                if latency is not None:
-                    prompt_latencies[(model_name, mapped_policy)] = latency
-        
-        # 누락된 모델 처리: tiny_llama, bloom_quant는 llama2_quant 차용
-        llama2_quant_file = Path(policy_dir) / 'llama2_quant.out'
-        if llama2_quant_file.exists():
-            for model_name in ['tiny_llama', 'bloom_quant']:
-                latency = _extract_first_latency(llama2_quant_file, model_name)
-                if latency is not None:
-                    prompt_latencies[(model_name, mapped_policy)] = latency
-
-    return prompt_latencies
-
-
-def generate_plot(base_dir, max_seq_len, prompt_latencies):
+def generate_plot(base_dir, max_seq_len):
     csv_path = "latency_all.csv"    
     if not os.path.exists(csv_path):
         print(f"Error: {csv_path} not found.")
@@ -195,22 +135,32 @@ def generate_plot(base_dir, max_seq_len, prompt_latencies):
     df = pd.read_csv(csv_path)
 
     seq_len_cols = [col for col in df.columns if col.startswith('seq_len_')]
-    seq_len_cols = sorted(seq_len_cols, key=lambda x: int(x.split('_')[-1]))
-
+    
     interval = 512
 
-    # seq_len을 interval 단위로 필터링
-    seq_len_cols = ['seq_len_1'] + [col for col in seq_len_cols if int(col.split('_')[-1]) % interval == 0]
+    # 필터링: seq_len_0 (Prompt), seq_len_1 (첫 토큰), 그리고 interval 단위
+    target_cols = ['seq_len_0', 'seq_len_1'] + [
+        col for col in seq_len_cols 
+        if int(col.split('_')[-1]) % interval == 0 and int(col.split('_')[-1]) > 0
+    ]
+    # 중복 제거 및 정렬
+    target_cols = sorted(list(set(target_cols)), key=lambda x: int(x.split('_')[-1]))
 
     df_long = df.melt(
         id_vars=["model", "policy"],
-        value_vars=seq_len_cols,
+        value_vars=target_cols,
         var_name="seq_len",
         value_name="latency"
     )
 
     df_long["seq_len"] = df_long["seq_len"].str.replace('seq_len_', '').astype(int)
     df_long["latency"] = pd.to_numeric(df_long["latency"], errors="coerce")
+
+    # 1. Prompt Latency 분리 (seq_len == 0)
+    prompt_df = df_long[df_long["seq_len"] == 0][["model", "policy", "latency"]].rename(columns={"latency": "prompt_latency"})
+    
+    # 2. Generation Latency 분리 (seq_len > 0)
+    df_long = df_long[df_long["seq_len"] > 0]
 
     all_seq_lens = range(1, max_seq_len + 1)
     models = df_long["model"].unique()
@@ -231,13 +181,7 @@ def generate_plot(base_dir, max_seq_len, prompt_latencies):
     df_expanded_merged['latency'] = df_expanded_merged.groupby(['model', 'policy'])['latency'].ffill()
     df_expanded = df_expanded_merged.dropna(subset=['latency'])
 
-    df_expanded = df_expanded.sort_values(["model", "policy", "seq_len"])
-    df_expanded["cumulative_latency"] = df_expanded.groupby(["model", "policy"])["latency"].cumsum() / 60
-
-    if df_expanded.empty:
-        print("Error: No data to process.")
-        sys.exit(1)
-
+    # 정책 매핑
     policy_map = {
         "gemmini": "Gemmini",
         "compiler-ideal": "Compiler-Ideal",
@@ -246,6 +190,19 @@ def generate_plot(base_dir, max_seq_len, prompt_latencies):
         "smooth-er": "SMOOTH-ER"
     }
     df_expanded["policy"] = df_expanded["policy"].map(policy_map)
+    prompt_df["policy"] = prompt_df["policy"].map(policy_map)
+
+    # DataFrame 병합 (prompt_latency를 매핑된 policy 기준으로 조인)
+    df_expanded = pd.merge(df_expanded, prompt_df, on=["model", "policy"], how="left")
+    df_expanded["prompt_latency"] = df_expanded["prompt_latency"].fillna(0.0)
+
+    # 3. 레이턴시 누적합 + 프롬프트 레이턴시
+    df_expanded = df_expanded.sort_values(["model", "policy", "seq_len"])
+    df_expanded["cumulative_latency"] = (df_expanded["prompt_latency"] + df_expanded.groupby(["model", "policy"])["latency"].cumsum()) / 60
+
+    if df_expanded.empty:
+        print("Error: No data to process.")
+        sys.exit(1)
 
     model_display_map = {
         "tiny_llama_quant": "TinyLLaMA (w4a8)", "tiny_llama": "TinyLLaMA (int8)",
@@ -344,27 +301,19 @@ def generate_plot(base_dir, max_seq_len, prompt_latencies):
         w = total_bar_width / 3
         if not sub_pivot_bar.empty:
             def get_prompt_ratio(policy_name, current_seqs):
-                # seq_1 디렉토리에서 가져온 prompt 레이턴시 적용
-                # 누적 레이턴시 스케일(/ 60)을 맞추기 위해 변환
-                raw_l1 = prompt_latencies.get((model, policy_name), 0)
+                # prompt_df에서 해당 모델/정책의 초기 레이턴시 검색
+                raw_l1_series = prompt_df.loc[(prompt_df["model"] == model) & (prompt_df["policy"] == policy_name), "prompt_latency"]
+                raw_l1 = raw_l1_series.values[0] if len(raw_l1_series) > 0 else 0
                 l1 = raw_l1 / 60.0 
                 
                 ratios = []
                 for s in current_seqs:
-                    if s == 1:
-                        ls_val = sub_df[(sub_df["policy"] == policy_name) & (sub_df["seq_len"] == s)]["cumulative_latency"].values
-                        ls = ls_val[0] if len(ls_val) > 0 else 0
-                        ratios.append(l1/ls)
+                    ls_val = sub_df[(sub_df["policy"] == policy_name) & (sub_df["seq_len"] == s)]["cumulative_latency"].values
+                    ls = ls_val[0] if len(ls_val) > 0 else 0
+                    if ls == 0:
+                        ratios.append(0)
                     else:
-                        try:
-                            ls_val = sub_df[(sub_df["policy"] == policy_name) & (sub_df["seq_len"] == s)]["cumulative_latency"].values
-                            ls = ls_val[0] if len(ls_val) > 0 else 0
-                            if ls == 0:
-                                ratios.append(0)
-                            else:
-                                ratios.append(l1*25 / ls)
-                        except:
-                            ratios.append(0)
+                        ratios.append(l1 / ls)
                 return np.array(ratios)
 
             seq_vals = sub_pivot_bar["seq_len"].values
@@ -427,31 +376,24 @@ def generate_plot(base_dir, max_seq_len, prompt_latencies):
     print(f"Plot saved to: {output_path}")
 
 if __name__ == "__main__":
-    # 실행 시 매개변수
+    # 실행 시 매개변수 (seq_1_dir 제거)
     base_dir = "../../../data/seq_32K/8MB/"
-    seq_1_dir = "../../../data/seq_1/8MB/"
     last_num = 32768
     
     # argument로 넘겨받을 경우
-    # 예: python script.py [seq_32K_dir] [seq_1_dir] [last_num]
+    # 예: python script.py [base_dir] [last_num]
     if len(sys.argv) > 1:
         base_dir = sys.argv[1]
     if len(sys.argv) > 2:
-        seq_1_dir = sys.argv[2]
-    if len(sys.argv) > 3:
-        last_num = int(sys.argv[3])
+        last_num = int(sys.argv[2])
 
     print(f"[*] Base directory set to: {base_dir}")
-    print(f"[*] Seq 1 directory set to: {seq_1_dir}")
     print(f"[*] Max sequence length set to: {last_num}")
 
-    print("\n[1/3] Generating latency_all.csv from .out files...")
+    print("\n[1/2] Generating latency_all.csv from .out files...")
     generate_csv(base_dir, last_num)
 
-    print("\n[2/3] Loading prompt latencies from seq_1 directory...")
-    prompt_latencies = load_prompt_latencies(seq_1_dir)
-
-    print("\n[3/3] Generating Plot from latency_all.csv and prompt_latencies...")
-    generate_plot(base_dir, last_num, prompt_latencies)
+    print("\n[2/2] Generating Plot from latency_all.csv...")
+    generate_plot(base_dir, last_num)
     
     print("\n[*] Execution Completed!")

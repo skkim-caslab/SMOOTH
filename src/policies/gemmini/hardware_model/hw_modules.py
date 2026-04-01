@@ -25,10 +25,10 @@ class VectorUnit:
 
 
 vector_unit_dict = {
-    "A100_fp16": VectorUnit(64, 2, 35, 32, 4),
-    "NPU_int8": VectorUnit(64, 1, 15, 32, 32, data_type_dict["int8"]),
-    "NPU_fp16": VectorUnit(64, 2, 15, 32, 32, data_type_dict["fp16"]),
-    "NPU_fp32": VectorUnit(64, 4, 15, 32, 32, data_type_dict["fp32"]),
+    "A100_fp16": VectorUnit(512, 2, 35, 32, 4),
+    "NPU_int8": VectorUnit(512, 1, 15, 32, 32, data_type_dict["int8"]),
+    "NPU_fp16": VectorUnit(512, 2, 15, 32, 32, data_type_dict["fp16"]),
+    "NPU_fp32": VectorUnit(512, 4, 15, 32, 32, data_type_dict["fp32"]),
     "MI210_fp32": VectorUnit(64, 4, 18, 16, 4, data_type_dict["fp32"]),
     "TPUv3_new": VectorUnit(64 * 4, 4, 15, 128, 4, data_type_dict["fp32"]),
 }
@@ -187,7 +187,7 @@ compute_module_dict = {
         1,
         940e6, ## core freq
         12 * 1024**3, ##LPDDR5
-        8, ##MemBW
+        32, ##MemBW
         overhead_dict["NPU"],
     ),
     "NPU_fp16": ComputeModule(

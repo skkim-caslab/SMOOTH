@@ -64,7 +64,7 @@ if __name__ == "__main__":
             data_type=data_type_dict[sr_data_type],
             system=TPU_system,
             config_file = config_file,
-            use_flash_attention=False,
+            use_flash_attention=True,
         )
         _ = model(
             Tensor([bs, input_token_length, model_dim], data_type_dict[sr_data_type])

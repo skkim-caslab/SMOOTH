@@ -4,17 +4,21 @@ import os
 import sys
 
 FILE_NAME=sys.argv[1]
-JSON_PATH = "./Tiles/test_tile/double_512_N_large.json"
-MAX_WORKERS = 20
-#SEQ_LEN_RANGE = [1] + list(range(512, 32768, 512))
-SEQ_LEN_RANGE = range(8190, 8195)
-#SEQ_LEN_RANGE = [2048, 4096, 8192, 16*1024, 32*1024]
 
-#SEQ_LEN_RANGE = [1]
-OUTPUT_PATH = "final/"+FILE_NAME+".out"
+TARGET_LEN = int(sys.argv[2])
+
+if TARGET_LEN < 0:
+    SEQ_LEN_RANGE = [0]
+    PROMPT_LEN = -TARGET_LEN
+else:
+    SEQ_LEN_RANGE = range(1, TARGET_LEN + 1)
+
+DEFAULT_JSON_PATH = "./Tiles/test_tile/double_512_N_large.json"
+MAX_WORKERS = 20
+OUTPUT_PATH = "../../../data/seq_1/8MB/capuchin/"+FILE_NAME+".out"
 CHECKPOINT_INTERVAL = 128
 
-# dim/head 매핑
+
 MODEL_CONFIG = {
     "gemma_2_2b_quant": (1024, 8),
     "gemma_2_2b": (2048, 8),
@@ -33,19 +37,20 @@ MODEL_CONFIG = {
 }
 
 def run_simulation(seq_len, init_flag=False):
-    global JSON_PATH
+    global DEFAULT_JSON_PATH
     
     try:
         dim, head = MODEL_CONFIG[FILE_NAME]
-        cmd = ["taskset", "-c", "6-47","python", "simulate.py", str(seq_len), JSON_PATH]
         if seq_len == 0:
-            JSON_PATH = "./Tiles/test_tile/double_512_MN_large.json"
-            cmd = ["taskset", "-c", "6-47", "python", "simulate.py", str(seq_len), JSON_PATH, str(dim), str(head), "--init"]
+            json_path = "./Tiles/test_tile/double_512_MN_large.json"
+            prompt_len = PROMPT_LEN
+            cmd = ["python", "simulate.py", str(prompt_len), json_path, str(dim), str(head), "--init"]
         else:
-            cmd = ["taskset", "-c", "6-47", "python", "simulate.py", str(seq_len), JSON_PATH, str(dim), str(head)]
+            json_path = DEFAULT_JSON_PATH
+            cmd = ["python", "simulate.py", str(seq_len), json_path, str(dim), str(head)]
+
         print(cmd)
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-#        print("END RUN... PROCESS RESULT")
 
         latency = 0.0
         sa_cycle = 0

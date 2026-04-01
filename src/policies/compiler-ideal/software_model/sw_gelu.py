@@ -80,6 +80,8 @@ class GeLU(Operator):
             / pcb_module.compute_module.l2_bandwidth_per_cycle
             / pcb_module.compute_module.clock_freq
         )
+        print("DEBUG SKKIM",total_io_count, pcb_module.io_module.bandwidth, pcb_module.compute_module.l2_bandwidth_per_cycle, pcb_module.compute_module.clock_freq
+, io_latency)
         total_flop_count = M * (
             10 + pcb_module.compute_module.core.vector_unit.flops_per_exp
         )

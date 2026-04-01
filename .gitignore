@@ -6,3 +6,5 @@ src/policies/*/Tiles/whole_tile_list_*
 src/policies/*/systolic_array_model/temp/
 src/policies/*/tmp_out
 src/policies/*/*.out
+*.swp
+*.out

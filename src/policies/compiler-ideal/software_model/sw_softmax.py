@@ -469,6 +469,8 @@ class Softmax(Operator):
         ):
             # online softmax
             total_flop_count = M * N * (self.flops_per_exp * 3 + 7)
+            print("++++++++++++++++++++++++",total_flop_count , M , N , self.flops_per_exp )
+
             # skkim: want to operate softamx parallel. then need to consider vector width and vector count
 #            M_per_vector_count = ceil(
 #                M / pcb_module.compute_module.core.vector_unit.vector_count

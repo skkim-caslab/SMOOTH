@@ -16,9 +16,10 @@ MODEL_LIST=(
     gpt3
 )
 
+### figure14. TTFT
 for FILE_NAME in "${MODEL_LIST[@]}"; do
     echo "Running $FILE_NAME..."
-    python run_decode.py "$FILE_NAME" -32 &
+    python run_decode.py "$FILE_NAME" -64 &
     echo "Finished $FILE_NAME"
     echo "--------------------------"
 done

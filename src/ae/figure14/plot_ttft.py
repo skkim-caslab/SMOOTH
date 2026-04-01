@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.patches as mpatches
 
+########################################################################
+### RUN COMMAND:  python plot_ttft.py ../../../data/seq_1/8MB/  ########
+########################################################################
+
 # ----------------------------------------------------------------------
 # 1. Define model layers and name mappings
 # ----------------------------------------------------------------------
@@ -32,18 +36,19 @@ MODEL_MAP = {
     "gpt3_quant": "GPT-3 13B (w4a8)", "gpt3": "GPT-3 13B (int8)",
 }
 
+
 # ----------------------------------------------------------------------
 # 2. Parsing and TTFT extraction function
 # ----------------------------------------------------------------------
 def get_ttft_from_file(filename, model_name):
-    """Reads the file and returns the adjusted latency (TTFT) ONLY for seq_len = 1."""
+    """Reads the file and returns the adjusted latency (TTFT) ONLY for seq_len = 0."""
     with open(filename, 'r') as file:
         reader = csv.reader(file, delimiter=',')
         for row in reader:
             if len(row) >= 2:
                 seq_len = int(row[0])
-                # Hardcoded for TTFT: stop and return immediately when seq_len == 1
-                if seq_len == 1:
+                # Modified: TTFT corresponds to seq_len == 0 in the .out files
+                if seq_len == 0:
                     original_latency = float(row[1])
                     layer_count = MODEL_LAYERS.get(model_name, 24)
                     return (original_latency / 24) * layer_count
@@ -160,8 +165,8 @@ def main():
     )
 
     # Y-axis setup
-    ax.set_yticks([0.5, 1.0])
-    ax.set_ylim([0.5, 1.05])
+    ax.set_yticks([0, 0.5, 1.0])
+#    ax.set_ylim([0.5, 1.15])
     ax.axhline(y=1.0, color='black', linestyle='--', linewidth=3, zorder=2)
     ax.set_ylabel(f"Normalized\n{metric}")
 
