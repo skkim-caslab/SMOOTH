@@ -42,8 +42,8 @@ class FlashAttention(Operator):
         self.B_r = self.d_h
 
         # Divide matrices into blocks
-        self.T_c = math.ceil(self.seq_len / self.B_c)  # Number of column blocks
-        self.T_r = math.ceil(1 / self.B_r)  # Number of row blocks
+        self.T_c = math.ceil(input_k.shape[-1] / self.B_c)  # Number of column blocks
+        self.T_r = math.ceil(input_q.shape[-2] / self.B_r)  # Number of row blocks
  
         self.Query = input_q
         self.Key = input_k
@@ -223,7 +223,7 @@ class FlashAttention(Operator):
         prv_write_cycle = 0
         next_read_cycle = 0
 
-        Q_i = self.Query
+        Q_i_list = self.split_to_tile(self.Query.shape[-2], self.B_r)
         K_j_list = self.split_to_tile(self.Key.shape[-1],self.B_c)
         V_j_list = self.split_to_tile(self.Value.shape[-2],self.B_c)
         for j in range(self.T_c):
@@ -235,6 +235,9 @@ class FlashAttention(Operator):
 #            V_j = self.V.to_numpy()[j * B_c : (j + 1) * B_c, :]
 #            print("K_j:", K_j)
             for i in range(self.T_r):
+                Q_i = self.Query.copy()
+                Q_i.shape[-2] = Q_i_list[i]
+
                 # Load blocks Q_i, O_i, l_i, and m_i into SRAM
 #                print("SKKIM QKV (Q,K,V)", self.Query.shape, self.Key.shape, self.Value.shape)
 #                print("SKKIM QKV tile (Q,K,V)", Q_i.shape, K_j.shape, V_j.shape)

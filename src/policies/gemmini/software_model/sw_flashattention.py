@@ -45,10 +45,8 @@ class FlashAttention(Operator):
         self.B_r = self.d_h
 
         # Divide matrices into blocks
-#        self.T_c = math.ceil(self.seq_len / self.B_c)  # Number of column blocks -> 4
-#        self.T_r = math.ceil(self.seq_len / self.B_r)  # Number of row blocks -> 25
-        self.T_c = math.ceil(self.seq_len / self.B_c) # 49
-        self.T_r = math.ceil(1/self.B_r)
+        self.T_c = math.ceil(input_k.shape[-1] / self.B_c)  # Number of column blocks
+        self.T_r = math.ceil(input_q.shape[-2] / self.B_r)  # Number of row blocks
 
 
         self.Query = input_q
@@ -62,6 +60,9 @@ class FlashAttention(Operator):
 #        print("Check in flash attention - QKV:", self.Query.shape, self.Key.shape, self.Value.shape)
         for j in range(self.T_c):
             for i in range(self.T_r):
+                Q_i = self.Query.copy()
+                Q_i.shape[-2] = Q_i_list[i]
+
                 # Load blocks Q_i, O_i, l_i, and m_i into SRAM
                 self.M = self.Query.shape[-2]
                 self.N = self.Key.shape[-1]

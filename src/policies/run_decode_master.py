@@ -18,7 +18,7 @@ else:
     DIR_NAME = "seq_default"
 
 # 받은 POLICY_NAME을 경로에 적용
-OUTPUT_PATH = f"../../data/{DIR_NAME}/8MB/{POLICY_NAME}/{FILE_NAME}.out"
+OUTPUT_PATH = f"../../../data/{DIR_NAME}/8MB/{POLICY_NAME}/{FILE_NAME}.out"
 if TARGET_LEN < 0:
     SEQ_LEN_RANGE = [0]
     PROMPT_LEN = -TARGET_LEN
@@ -27,7 +27,7 @@ else:
     SEQ_LEN_RANGE = range(1, TARGET_LEN + 1, ROOFTOP_INTERVAL)
 
 DEFAULT_JSON_PATH = "./Tiles/test_tile/double_512_N_large.json"
-MAX_WORKERS = 20
+MAX_WORKERS = 1
 
 # 동적 디렉토리 경로 적용
 CHECKPOINT_INTERVAL = 128
