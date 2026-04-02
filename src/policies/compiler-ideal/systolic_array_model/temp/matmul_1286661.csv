@@ -1,2 +1,2 @@
 Layer, M, N, K
-matmul1, 1, 16, 128,
+matmul1, 1, 64, 256,

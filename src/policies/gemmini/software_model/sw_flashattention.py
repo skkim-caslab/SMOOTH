@@ -60,8 +60,6 @@ class FlashAttention(Operator):
 #        print("Check in flash attention - QKV:", self.Query.shape, self.Key.shape, self.Value.shape)
         for j in range(self.T_c):
             for i in range(self.T_r):
-                Q_i = self.Query.copy()
-                Q_i.shape[-2] = Q_i_list[i]
 
                 # Load blocks Q_i, O_i, l_i, and m_i into SRAM
                 self.M = self.Query.shape[-2]
@@ -220,7 +218,7 @@ class FlashAttention(Operator):
 
         previous_compute_cycle = 0
 #        w0_latency = 0
-        Q_i = self.Query
+        Q_i_list = self.split_to_tile(self.Query.shape[-2], self.B_r)
         K_j_list = self.split_to_tile(self.Key.shape[-1],self.B_c)
         V_j_list = self.split_to_tile(self.Value.shape[-2],self.B_c)
 
@@ -232,6 +230,8 @@ class FlashAttention(Operator):
             V_j.shape[-2] = V_j_list[j]
 #            print("K_j:", K_j)
             for i in range(self.T_r):
+                Q_i = self.Query.copy()
+                Q_i.shape[-2] = Q_i_list[i]
 
                 self.M = Q_i.shape[-2]
                 self.N = K_j.shape[-1]

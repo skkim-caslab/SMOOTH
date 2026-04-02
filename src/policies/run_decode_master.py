@@ -18,7 +18,7 @@ else:
     DIR_NAME = "seq_default"
 
 # 받은 POLICY_NAME을 경로에 적용
-OUTPUT_PATH = f"../../../data/{DIR_NAME}/8MB/{POLICY_NAME}/{FILE_NAME}.out"
+OUTPUT_PATH = f"../../data/{DIR_NAME}/8MB/{POLICY_NAME}/{FILE_NAME}.out"
 if TARGET_LEN < 0:
     SEQ_LEN_RANGE = [0]
     PROMPT_LEN = -TARGET_LEN
@@ -30,7 +30,7 @@ DEFAULT_JSON_PATH = "./Tiles/test_tile/double_512_N_large.json"
 MAX_WORKERS = 1
 
 # 동적 디렉토리 경로 적용
-CHECKPOINT_INTERVAL = 128
+CHECKPOINT_INTERVAL = 4
 
 MODEL_CONFIG = {
     "gemma_2_2b_quant": (1024, 8),
@@ -100,7 +100,7 @@ def run_simulation(seq_len, init_flag=False):
         return True, (seq_len, latency, sa_cycle, ve_cycle, total_linear_cycle, total_non_linear_cycle)
 
     except subprocess.CalledProcessError:
-        print(f"Error at seq_len {seq_len}{' with --init' if init_flag else ''}")
+        print(f"Error {POLICY_NAME}: at seq_len {seq_len}{' with --init' if init_flag else ''}")
         return False, None
 
 def load_existing_results(path):
