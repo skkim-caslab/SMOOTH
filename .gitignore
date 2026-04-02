@@ -8,3 +8,4 @@ src/policies/*/tmp_out
 src/policies/*/*.out
 *.swp
 *.out
+!data/energy/**

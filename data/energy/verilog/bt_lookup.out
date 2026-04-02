@@ -1,0 +1,82 @@
+
+14. Printing statistics.
+
+=== bt_lookup ===
+
+   Number of wires:                220
+   Number of wire bits:            522
+   Number of public wires:          17
+   Number of public wire bits:     201
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                381
+     AND2x2_ASAP7_75t_SRAM           2
+     AND3x1_ASAP7_75t_SRAM           1
+     AO21x1_ASAP7_75t_SRAM           2
+     AOI211xp5_ASAP7_75t_SRAM        1
+     AOI21xp33_ASAP7_75t_SRAM       24
+     DFFASRHQNx1_ASAP7_75t_SRAM    107
+     INVx1_ASAP7_75t_SRAM           90
+     NAND2xp33_ASAP7_75t_SRAM       29
+     NAND3xp33_ASAP7_75t_SRAM        3
+     NOR2xp33_ASAP7_75t_SRAM        48
+     NOR3xp33_ASAP7_75t_SRAM         3
+     NOR4xp25_ASAP7_75t_SRAM         3
+     NOR5xp2_ASAP7_75t_SRAM          1
+     O2A1O1Ixp33_ASAP7_75t_SRAM      1
+     OAI211xp5_ASAP7_75t_SRAM        1
+     OAI21xp33_ASAP7_75t_SRAM       29
+     OAI221xp5_ASAP7_75t_SRAM       15
+     OAI22xp33_ASAP7_75t_SRAM        2
+     OAI31xp33_ASAP7_75t_SRAM        3
+     OAI32xp33_ASAP7_75t_SRAM        1
+     OR3x1_ASAP7_75t_SRAM            3
+     OR4x1_ASAP7_75t_SRAM            2
+     OR5x1_ASAP7_75t_SRAM            1
+     XNOR2xp5_ASAP7_75t_SRAM         6
+     XOR2xp5_ASAP7_75t_SRAM          3
+
+   Chip area for module '\bt_lookup': 58.188780
+
+Startpoint: _481_ (rising edge-triggered flip-flop clocked by clk)
+Endpoint: _523_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+  Delay    Time   Description
+---------------------------------------------------------
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00 ^ _481_/CLK (DFFASRHQNx1_ASAP7_75t_SRAM)
+ 151.32  151.32 v _481_/QN (DFFASRHQNx1_ASAP7_75t_SRAM)
+ 137.54  288.86 ^ _205_/Y (INVx1_ASAP7_75t_SRAM)
+ 194.86  483.72 v _314_/Y (AOI21xp33_ASAP7_75t_SRAM)
+  94.86  578.58 v _315_/Y (AO21x1_ASAP7_75t_SRAM)
+  36.60  615.18 ^ _468_/Y (OAI221xp5_ASAP7_75t_SRAM)
+   0.00  615.18 ^ _523_/D (DFFASRHQNx1_ASAP7_75t_SRAM)
+         615.18   data arrival time
+
+   1.06    1.06   clock clk (rise edge)
+   0.00    1.06   clock network delay (ideal)
+   0.00    1.06   clock reconvergence pessimism
+           1.06 ^ _523_/CLK (DFFASRHQNx1_ASAP7_75t_SRAM)
+ -42.71  -41.65   library setup time
+         -41.65   data required time
+---------------------------------------------------------
+         -41.65   data required time
+        -615.18   data arrival time
+---------------------------------------------------------
+        -656.83   slack (VIOLATED)
+
+
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power
+----------------------------------------------------------------
+Sequential             2.07e-01   4.63e-03   1.86e-08   2.12e-01  93.5%
+Combinational          7.53e-03   7.17e-03   6.68e-09   1.47e-02   6.5%
+Macro                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  2.15e-01   1.18e-02   2.53e-08   2.26e-01 100.0%
+                          94.8%       5.2%       0.0%

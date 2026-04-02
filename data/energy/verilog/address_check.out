@@ -1,0 +1,60 @@
+
+14. Printing statistics.
+
+=== address_check ===
+
+   Number of wires:                 31
+   Number of wire bits:             94
+   Number of public wires:          10
+   Number of public wire bits:      73
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 37
+     DFFASRHQNx1_ASAP7_75t_SRAM     16
+     INVx1_ASAP7_75t_SRAM           16
+     NAND3xp33_ASAP7_75t_SRAM        1
+     NOR2xp33_ASAP7_75t_SRAM         1
+     NOR4xp25_ASAP7_75t_SRAM         1
+     NOR5xp2_ASAP7_75t_SRAM          1
+     OR4x1_ASAP7_75t_SRAM            1
+
+   Chip area for module '\address_check': 7.187940
+
+Startpoint: _48_ (rising edge-triggered flip-flop clocked by clk)
+Endpoint: addr_out[0] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+  Delay    Time   Description
+---------------------------------------------------------
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00 ^ _48_/CLK (DFFASRHQNx1_ASAP7_75t_SRAM)
+  66.93   66.93 v _48_/QN (DFFASRHQNx1_ASAP7_75t_SRAM)
+  16.76   83.70 ^ _28_/Y (INVx1_ASAP7_75t_SRAM)
+   0.00   83.70 ^ addr_out[0] (out)
+          83.70   data arrival time
+
+   1.06    1.06   clock clk (rise edge)
+   0.00    1.06   clock network delay (ideal)
+   0.00    1.06   clock reconvergence pessimism
+  -2.00   -0.94   output external delay
+          -0.94   data required time
+---------------------------------------------------------
+          -0.94   data required time
+         -83.70   data arrival time
+---------------------------------------------------------
+         -84.63   slack (VIOLATED)
+
+
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power
+----------------------------------------------------------------
+Sequential             2.99e-02   2.00e-04   2.78e-09   3.01e-02  98.5%
+Combinational          1.18e-04   3.45e-04   4.54e-10   4.64e-04   1.5%
+Macro                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  3.00e-02   5.46e-04   3.24e-09   3.05e-02 100.0%
+                          98.2%       1.8%       0.0%

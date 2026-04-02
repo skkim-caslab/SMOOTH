@@ -1,0 +1,107 @@
+
+15. Printing statistics.
+
+=== alloc_with_frag ===
+
+   Number of wires:                785
+   Number of wire bits:           1174
+   Number of public wires:          22
+   Number of public wire bits:     240
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               1048
+     A2O1A1Ixp33_ASAP7_75t_SRAM     34
+     A2O1A1O1Ixp25_ASAP7_75t_SRAM      8
+     AND2x2_ASAP7_75t_SRAM           4
+     AND3x1_ASAP7_75t_SRAM           2
+     AND4x1_ASAP7_75t_SRAM           6
+     AO21x1_ASAP7_75t_SRAM           9
+     AO32x1_ASAP7_75t_SRAM           1
+     AOI211xp5_ASAP7_75t_SRAM        5
+     AOI21xp33_ASAP7_75t_SRAM       57
+     AOI221xp5_ASAP7_75t_SRAM        2
+     AOI22xp33_ASAP7_75t_SRAM        5
+     AOI311xp33_ASAP7_75t_SRAM       1
+     AOI31xp33_ASAP7_75t_SRAM       12
+     AOI321xp33_ASAP7_75t_SRAM       1
+     DFFASRHQNx1_ASAP7_75t_SRAM    193
+     INVx1_ASAP7_75t_SRAM          178
+     MAJIxp5_ASAP7_75t_SRAM         11
+     MAJx2_ASAP7_75t_SRAM            1
+     NAND2xp33_ASAP7_75t_SRAM       79
+     NAND3xp33_ASAP7_75t_SRAM       13
+     NAND4xp25_ASAP7_75t_SRAM        2
+     NAND5xp2_ASAP7_75t_SRAM         3
+     NOR2xp33_ASAP7_75t_SRAM        70
+     NOR3xp33_ASAP7_75t_SRAM        13
+     NOR4xp25_ASAP7_75t_SRAM         3
+     NOR5xp2_ASAP7_75t_SRAM          1
+     O2A1O1Ixp33_ASAP7_75t_SRAM     14
+     OA211x2_ASAP7_75t_SRAM          1
+     OA21x2_ASAP7_75t_SRAM           4
+     OAI211xp5_ASAP7_75t_SRAM        4
+     OAI21xp33_ASAP7_75t_SRAM      109
+     OAI221xp5_ASAP7_75t_SRAM       30
+     OAI22xp33_ASAP7_75t_SRAM       34
+     OAI311xp33_ASAP7_75t_SRAM       1
+     OAI31xp33_ASAP7_75t_SRAM        8
+     OAI32xp33_ASAP7_75t_SRAM        2
+     OR2x2_ASAP7_75t_SRAM           25
+     OR3x1_ASAP7_75t_SRAM            8
+     OR4x1_ASAP7_75t_SRAM            8
+     OR5x1_ASAP7_75t_SRAM            1
+     XNOR2xp5_ASAP7_75t_SRAM        63
+     XOR2xp5_ASAP7_75t_SRAM         22
+
+   Chip area for module '\alloc_with_frag': 138.262140
+
+Startpoint: _1739_ (rising edge-triggered flip-flop clocked by clk)
+Endpoint: _1674_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+  Delay    Time   Description
+---------------------------------------------------------
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00 ^ _1739_/CLK (DFFASRHQNx1_ASAP7_75t_SRAM)
+  95.26   95.26 ^ _1739_/QN (DFFASRHQNx1_ASAP7_75t_SRAM)
+  41.65  136.91 ^ _1061_/Y (XNOR2xp5_ASAP7_75t_SRAM)
+  38.29  175.19 v _1062_/Y (OAI21xp33_ASAP7_75t_SRAM)
+  45.57  220.76 ^ _1064_/Y (A2O1A1Ixp33_ASAP7_75t_SRAM)
+  50.92  271.68 v _1066_/Y (A2O1A1O1Ixp25_ASAP7_75t_SRAM)
+  52.35  324.03 ^ _1067_/Y (O2A1O1Ixp33_ASAP7_75t_SRAM)
+  45.89  369.93 v _1070_/Y (OAI311xp33_ASAP7_75t_SRAM)
+  41.98  411.91 ^ _1073_/Y (A2O1A1O1Ixp25_ASAP7_75t_SRAM)
+  43.70  455.61 v _1075_/Y (OAI31xp33_ASAP7_75t_SRAM)
+ 197.88  653.48 ^ _1089_/Y (AOI21xp33_ASAP7_75t_SRAM)
+ 139.29  792.77 v _1198_/Y (NOR2xp33_ASAP7_75t_SRAM)
+ 492.10 1284.87 ^ _1253_/Y (AOI21xp33_ASAP7_75t_SRAM)
+ 223.31 1508.18 v _1379_/Y (OAI32xp33_ASAP7_75t_SRAM)
+   0.00 1508.18 v _1674_/D (DFFASRHQNx1_ASAP7_75t_SRAM)
+        1508.18   data arrival time
+
+   1.06    1.06   clock clk (rise edge)
+   0.00    1.06   clock network delay (ideal)
+   0.00    1.06   clock reconvergence pessimism
+           1.06 ^ _1674_/CLK (DFFASRHQNx1_ASAP7_75t_SRAM)
+ -42.36  -41.30   library setup time
+         -41.30   data required time
+---------------------------------------------------------
+         -41.30   data required time
+        -1508.18   data arrival time
+---------------------------------------------------------
+        -1549.48   slack (VIOLATED)
+
+
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power
+----------------------------------------------------------------
+Sequential             4.07e-01   1.70e-02   3.36e-08   4.24e-01  76.9%
+Combinational          8.24e-02   4.52e-02   2.67e-08   1.28e-01  23.1%
+Macro                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  4.89e-01   6.21e-02   6.03e-08   5.51e-01 100.0%
+                          88.7%      11.3%       0.0%

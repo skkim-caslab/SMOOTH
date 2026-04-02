@@ -1,0 +1,41 @@
+
+14. Printing statistics.
+
+=== find_longest_zero_run ===
+
+   Number of wires:                146
+   Number of wire bits:            299
+   Number of public wires:          12
+   Number of public wire bits:     108
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                235
+     A2O1A1Ixp33_ASAP7_75t_SRAM      1
+     AND2x2_ASAP7_75t_SRAM           1
+     AO21x1_ASAP7_75t_SRAM           4
+     AOI21xp33_ASAP7_75t_SRAM        4
+     AOI31xp33_ASAP7_75t_SRAM        1
+     DFFASRHQNx1_ASAP7_75t_SRAM     68
+     INVx1_ASAP7_75t_SRAM           54
+     NAND2xp33_ASAP7_75t_SRAM        6
+     NAND3xp33_ASAP7_75t_SRAM        2
+     NOR2xp33_ASAP7_75t_SRAM        41
+     NOR3xp33_ASAP7_75t_SRAM         3
+     NOR4xp25_ASAP7_75t_SRAM         2
+     O2A1O1Ixp33_ASAP7_75t_SRAM      2
+     OA21x2_ASAP7_75t_SRAM           4
+     OAI21xp33_ASAP7_75t_SRAM        6
+     OAI221xp5_ASAP7_75t_SRAM        8
+     OAI22xp33_ASAP7_75t_SRAM        3
+     OAI31xp33_ASAP7_75t_SRAM        1
+     OAI32xp33_ASAP7_75t_SRAM        6
+     OR2x2_ASAP7_75t_SRAM            5
+     OR3x1_ASAP7_75t_SRAM            3
+     OR4x1_ASAP7_75t_SRAM            2
+     OR5x1_ASAP7_75t_SRAM            2
+     XNOR2xp5_ASAP7_75t_SRAM         3
+     XOR2xp5_ASAP7_75t_SRAM          3
+
+   Chip area for module '\find_longest_zero_run': 37.047780
+
