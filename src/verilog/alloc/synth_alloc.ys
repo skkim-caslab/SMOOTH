@@ -1,0 +1,21 @@
+read_verilog alloc_with_frag.v
+
+hierarchy -check -top alloc_with_frag
+
+proc
+opt
+fsm
+opt
+memory -nomap  ;# 플립플롭으로 매핑 방지
+memory_map      ;# 배열을 메모리 프리미티브로 매핑
+techmap
+opt
+
+# 라이브러리 매핑
+dfflibmap -liberty ../libs/asap7.lib
+abc -liberty ../libs/asap7.lib
+opt
+
+# 네트리스트 및 보고서 출력
+write_verilog -noattr synthesized_alloc_with_frag.v
+tee -o ../../../data/energy/verilog/alloc.out stat -liberty ../libs/asap7.lib

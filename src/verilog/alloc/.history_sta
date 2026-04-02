@@ -1,0 +1,2 @@
+read_liberty combined_asap7.lib 
+read_verilog synthesized_find_longest_zero_run.v 

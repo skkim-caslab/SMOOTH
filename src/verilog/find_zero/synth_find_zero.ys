@@ -1,0 +1,20 @@
+read_verilog find_longest_zero_run.v
+
+hierarchy -check -top find_longest_zero_run
+
+proc
+opt
+fsm
+opt
+memory
+techmap
+opt
+
+# 라이브러리 매핑
+dfflibmap -liberty  ../libs/asap7.lib
+abc -liberty  ../libs/asap7.lib
+opt
+
+# 네트리스트 및 보고서 출력
+write_verilog -noattr synthesized_find_longest_zero.v
+tee -o ../../../data/energy/verilog/find_zero.out stat -liberty  ../libs/asap7.lib

@@ -9,15 +9,28 @@ MODEL_LIST=(
 )
 
 ROOFTOP_INTERVAL=512
+OUTPUT_LENS=(1025 8193 32769)
+BLOCK_SIZES=(256 512 1024 2048 4096)
+NUM_CORES=15
 
-
-# 모든 조합의 커맨드를 생성하여 xargs로 파이프(|) 전달
+(
 for POLICY in "${POLICY_LIST[@]}"; do
+# 1. figure 14, 16
     for FILE_NAME in "${MODEL_LIST[@]}"; do
 #        echo "python run_decode_master.py $FILE_NAME -64 1 $POLICY"
 #        echo "python run_decode_master.py $FILE_NAME -1024 1 $POLICY"
         echo "python run_decode_master.py $FILE_NAME 32768 $ROOFTOP_INTERVAL $POLICY"
     done
-done | xargs -I {} -P 15 bash -c "{}"
+# 2. figure 20
+    for FILE_NAME in "${MODEL_LIST[@]}"; do
+        for OUT_LEN in "${OUTPUT_LENS[@]}"; do
+            for BLK_SIZE in "${BLOCK_SIZES[@]}"; do
+                # 인자: 모델명, 0(에너지모드), 블록사이즈, 정책이름, 출력길이
+                echo "python run_decode_master.py $FILE_NAME 0 $BLK_SIZE smooth-er $OUT_LEN"
+            done
+        done
+    done
+done
+) | xargs -I {} -P "$NUM_CORES" bash -c "{}"
 
 echo "All policies and phases executed successfully!"

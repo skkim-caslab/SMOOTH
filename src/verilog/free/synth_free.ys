@@ -1,0 +1,23 @@
+# Read Verilog file
+read_verilog free.v
+
+# Set top module
+hierarchy -check -top free
+
+# Synthesis steps
+proc
+opt
+fsm
+opt
+memory
+techmap
+opt
+
+# Map to library
+dfflibmap -liberty ../libs/asap7.lib
+abc -liberty ../libs/asap7.lib
+opt
+
+# Output netlist and report
+write_verilog -noattr synthesized_free.v
+tee -o ../../../data/energy/verilog/free.out stat -liberty ../libs/asap7.lib
