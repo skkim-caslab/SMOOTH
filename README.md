@@ -6,7 +6,9 @@ This paper is submitted to **ISCA 2026**.
 
 ## 1. Environment Setup
 
-SMOOTH relies on the cycle-accurate simulator [LLMCompass](https://github.com/PrincetonUniversity/LLMCompass) for architectural simulation and [Yosys](https://github.com/YosysHQ/yosys) for hardware logic synthesis. Additionally, we use the [ASAP7](https://github.com/The-OpenROAD-Project/asap7) predictive 7nm standard cell library for accurate area, timing, and power estimations.
+SMOOTH relies on the cycle-accurate simulator [LLMCompass](https://github.com/PrincetonUniversity/LLMCompass) for architectural simulation and [Yosys](https://github.com/YosysHQ/yosys) for hardware logic synthesis. 
+
+For your convenience, the **[ASAP7](https://github.com/The-OpenROAD-Project/asap7)** predictive 7nm standard cell library is **already included in this repository** to ensure out-of-the-box hardware synthesis and overhead evaluation.
 
 Please follow the installation guides in their respective official repositories to prepare your environment:
 * **[LLMCompass](https://github.com/PrincetonUniversity/LLMCompass)**: For cycle-accurate LLM inference simulation.
