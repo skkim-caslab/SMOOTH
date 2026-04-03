@@ -34,23 +34,13 @@ class BatchedMatmul(Operator):
         self.K = self.input1_shape[-1]
         assert self.input2_shape[-2] == self.K
         self.N = self.input2_shape[-1]
-#        print(f'SKKIM batchedmatmul dimension1: {self.input1_shape}, {self.input2_shape}')
-#        print(f'SKKIM batchedmatmul dimension: {self.M}, {self.N}, {self.K}')
         self.output_shape = self.input1_shape[:-2] + [self.M, self.N]
         output = Tensor(self.output_shape, self.data_type)
         self.config_file = config_file
         return output
 
     def compile_and_simulate(self, pcb_module: Device, ops_name: str):
-        '''
-        matmul = Matmul(self.data_type)
-        _ = matmul(Tensor([self.M, self.K]), Tensor([self.K, self.N]))
-        matmul_latency1 = (
-            matmul.compile_and_simulate(pcb_module, ops_name) * self.bs
-        )
-        '''
 
-#        print(f"Batchtest 01, {self.M} , {self.N}, {self.K} -> latency: {matmul_latency1}")
         matmul = Matmul(self.data_type)
         _ = matmul(
             Tensor([self.M, self.K * self.bs]), Tensor([self.K * self.bs, self.N]), self.config_file
@@ -64,10 +54,7 @@ class BatchedMatmul(Operator):
             * self.data_type.word_size
             / pcb_module.io_module.bandwidth
         )
-#        print(f"Batchtest 02, {self.M} , {self.N}, {self.K} -> latency: {matmul_latency2}")
         self.latency = matmul_latency2
-        #self.latency = min(matmul_latency1, matmul_latency2)
-        #print(f"Batchtest, {self.latency} , {matmul_latency1}, {matmul_latency2}")
         return self.latency
 
 class Matmul(Operator):
@@ -100,8 +87,6 @@ class Matmul(Operator):
         )
         self.flop_count = 2 * self.M * self.K * self.N
         self.io_count = self.M * self.K + self.K * self.N + self.M * self.N
-#        print(f'SKKIM matmul dimension1: {self.input1_shape}, {self.input2_shape}')
-#        print(f'SKKIM matmul dimension: {self.M}, {self.N}, {self.K}')
         with open(config_file, 'r') as f:
             self.tile_config = json.load(f)
         return output
@@ -235,14 +220,12 @@ class Matmul(Operator):
                 print("total cycle:",self.best_cycle_count)
                 return self.best_cycle_count
         '''
-        #skkim: for fast exp.
 
         l2_loop_order = "knm"
         l1_loop_order = "knm"
         l0_M_tiling_factor = 1
         l0_N_tiling_factor = 1
         l0_K_tiling_factor = 1
-#                    ) in [(1, 2, 1)]: #skkim
         mapping = self.Mapping(
             l2_tile_M,
             l2_tile_N,
@@ -257,8 +240,6 @@ class Matmul(Operator):
             l0_N_tiling_factor,
             l0_K_tiling_factor,
         )
-#                        mapping.display()
-            # start=time.time()
         cycle_count = self.simulate(
             self.computational_graph,
             mapping,
@@ -266,8 +247,6 @@ class Matmul(Operator):
             ops_name,
             next_ops_name
         )
-            # end=time.time()
-            # print(f'simulation time: {end-start}')
 
         self.best_mapping = mapping
         M_size = self.best_mapping.l1_tile_M
@@ -288,9 +267,6 @@ class Matmul(Operator):
         with open(cache_config, 'w') as f:
             json.dump(cached_data, f, indent=4)
 
-        #print("DEBUG cycle", cycle_count)
-        #print("DEBUG latency", self.latency)
-        #return self.latency
         return self.best_cycle_count
 
     def simulate(
@@ -496,13 +472,6 @@ class Matmul(Operator):
             self.compute_cycle_count = self.simulate_l2_tile_compute_cycle_count(
                 M, N, K, data_type, mapping, pcb_module, look_up_table, ops_name
             )
-            #print("class Matmul > def compile_and_simulate > def simulate > class L2TileSimulator > def __init__")
-            #print("result of simulate_l2_tile_io_cycle_count: ")
-            #print(self.M_K_io_cycle_count)
-            #print(self.K_N_io_cycle_count)
-            #print(self.M_N_io_cycle_count)
-            #print("result of simulate_l2_tile_compute_cycle_count: ")
-            #print(self.compute_cycle_count)
 
         def simulate_l2_tile_io_cycle_count(
             self, M: int, N: int, data_type: DataType, chiplet_module: Device
@@ -629,7 +598,6 @@ class Matmul(Operator):
             previous_batch_compute_cycle_count = 0
             active_l1_tile_list = []
 
-#            print("SKKIM", M, N, K, l1_tile_M, l1_tile_N, l1_tile_K)
             for m, n, k in Matmul.generate_tile_loops(
                 ceil(M / l1_tile_M),
                 ceil(N / l1_tile_N),
@@ -694,7 +662,6 @@ class Matmul(Operator):
                     (current_batch_Read_K_N * (~previous_batch_Read_K_N))
                     * K_N_tile_size
                 )
-                print("DEBUG NK", current_batch_K_N_read_count,current_batch_Read_K_N , (~previous_batch_Read_K_N),K_N_tile_size)
                 current_batch_M_N_read_count = np.sum(
                     (
                         current_batch_Read_M_N
@@ -718,8 +685,6 @@ class Matmul(Operator):
                     * chiplet_module.compute_module.core.systolic_array.input_word_size
                     / chiplet_module.compute_module.l2_bandwidth_per_cycle
                 )
-                print("DEBUG", current_batch_M_K_read_count, current_batch_K_N_read_count, current_batch_M_N_read_count,chiplet_module.compute_module.core.systolic_array.input_word_size, chiplet_module.compute_module.l2_bandwidth_per_cycle)
-                #print("too small read count", current_batch_M_K_read_count  ,current_batch_K_N_read_count,current_batch_M_N_read_count)
                 prvious_batch_write_cycle_count = ceil(
                     previous_batch_M_N_write_count
                     * chiplet_module.compute_module.core.systolic_array.output_word_size
@@ -740,23 +705,18 @@ class Matmul(Operator):
                     )
                     + prvious_batch_write_cycle_count
                 )
-#                print("SKKIM LOG",m,n,k)
-#                print("SKKIM LOG",current_batch_read_cycle_count, prvious_batch_write_cycle_count, previous_batch_compute_cycle_count)
                 print("total cycle(X) : ",total_cycle_count)
                 print("compute cycle(X1) : ",previous_batch_compute_cycle_count)
                 print("SA cycle(X1) : ",previous_batch_compute_cycle_count)
                 print("io cycle(X2) : ",(current_batch_read_cycle_count + prvious_batch_write_cycle_count))
                 io_total_cycle_count += (max(current_batch_read_cycle_count-previous_batch_compute_cycle_count, 0) + prvious_batch_write_cycle_count)
                 print("accum io cycle(X2) : ", io_total_cycle_count)
-#                print("io cycle; previous write(X2) : ",(prvious_batch_write_cycle_count))
-#                print("io cycle; current read(X2) : ",(current_batch_read_cycle_count))
                 print("current cycle(X3) : ",current_cycle_count)
                 loadable_amount = current_cycle_count-(current_batch_read_cycle_count + prvious_batch_write_cycle_count)
                 if loadable_amount != 0:
                     print("loadable cycle(X4) : ", loadable_amount)
 
                 print("memory bw util[%](Y1) : ", (current_batch_read_cycle_count + prvious_batch_write_cycle_count)/current_cycle_count * 100) 
-#                print("sram occupancy[%](Y2) : ", (current_batch_read_count * chiplet_module.compute_module.core.systolic_array.input_word_size + previous_batch_M_N_write_count* chiplet_module.compute_module.core.systolic_array.output_word_size)/ chiplet_module.compute_module.core.SRAM_size * 100)
                 print("sram occupancy[%](Y2) : ", (l1_tile_M * l1_tile_N + l1_tile_N * l1_tile_K + l1_tile_M * l1_tile_K)*2/chiplet_module.compute_module.core.SRAM_size * 100)
                 print("sa util[%](Y3) : ", util_rate * 100)
                 print("va util[%](Y3) : ", 0)
@@ -820,7 +780,6 @@ class Matmul(Operator):
             self.sram_loads, self.memory_usage = self.simulate_l1_tile_sram_usage(
                 M, N, K, data_type, chiplet_module
             )
-#            print("Load:",self.sram_loads, "Occu:",self.memory_usage)
 
         def simulate_l1_tile_sram_usage(
             self,
@@ -844,17 +803,8 @@ class Matmul(Operator):
             chiplet_module: Device,
             look_up_table: pd.DataFrame,
         ):
-            '''
-            assert (
-                M * K + K * N + M * N
-                <= chiplet_module.compute_module.core.SRAM_size
-                // data_type.word_size
-                // 2
-            )
-            '''
             required_space = M * K + K * N + M * N
             available_space = chiplet_module.compute_module.core.SRAM_size // data_type.word_size // 2
-            #print("WARN", required_space / 1024, "KB")
             assert required_space <= available_space, (
                f"SRAM capacity exceeded: required={required_space}, available={available_space} "
                f"M={M}, N={N}, K={K}"
@@ -865,8 +815,6 @@ class Matmul(Operator):
             M_tiling_factor = mapping.l0_M_tiling_factor
             N_tiling_factor = mapping.l0_N_tiling_factor
             K_tiling_factor = mapping.l0_K_tiling_factor
-#            print(">>>>>>",M_tiling_factor ,K_tiling_factor ,N_tiling_factor)
-#            print(">>>>>>",chiplet_module.compute_module.core.systolic_array_count)
             assert (
                 M_tiling_factor * K_tiling_factor * N_tiling_factor
                 <= chiplet_module.compute_module.core.systolic_array_count
@@ -881,20 +829,12 @@ class Matmul(Operator):
                     chiplet_module.compute_module.core.systolic_array.mac_per_cycle,
                     mapping.dataflow,
             )
-#            print("SKKIM matmul", tmp_compute_cycle)
-#            print("SKKIM CHECK (MAC ", chiplet_module.compute_module.core.systolic_array.mac_per_cycle, "):",tmp_compute_cycle)
 
             compute_cycle_count = ceil(tmp_compute_cycle + (K_tiling_factor - 1)
                 * M
                 * N
                 / chiplet_module.compute_module.core.vector_unit.total_vector_flops_per_cycle
             )
-#            print("###########################", compute_cycle_count)
-#            print(f"#### ceil({tmp_compute_cycle} + ({K_tiling_factor} -1) * {M} * {N} / {chiplet_module.compute_module.core.vector_unit.total_vector_flops_per_cycle} ############")
-
-#            print("sa util[%](Y3) : ", util_rate)
-#`            return compute_cycle_count
-#            print("SKKIM matmul", M,N,K,compute_cycle_count)
             return compute_cycle_count, util_rate
 
     @staticmethod
@@ -908,17 +848,14 @@ class Matmul(Operator):
         mac_per_clock,
         dataflow="os",
     ):
-#        print(f'SKKIM {M} {N} {K} {array_height} {array_width} {mac_per_clock} {dataflow}')
         util_rate = -1
         assert M * N * K * array_height * array_width * mac_per_clock != 0
         if M >= array_height and N >= array_width:
-#            print(f"Utilization Rate 6: 1")
             util_rate = 1
             if (
                 M * N * K / array_height / array_width / max(array_height, array_width)
                 >= 128
             ):
-#                print("SKKIM TEST1")
                 return ceil(
                     M * N * K / array_height / array_width / mac_per_clock / 0.99
                 ), 1
@@ -926,22 +863,18 @@ class Matmul(Operator):
                 M * N * K / array_height / array_width / max(array_height, array_width)
                 >= 64
             ):
-#                print("SKKIM TEST2")
                 return ceil(
                     M * N * K / array_height / array_width / mac_per_clock / 0.98
                 ),1
         elif M >= array_height and N < array_width:
             if K * M / array_height / max(array_height, array_width) >= 64:
                 util_rate = N / array_width / 0.98 
-#                print(f"Utilization Rate 1: {util_rate:.3f}")
-#                print("SKKIM TEST3")
                 return ceil(
                     M * N * K / array_height / array_width / mac_per_clock / util_rate
                 ), util_rate
         elif M < array_height and N >= array_width:
             if K * N / array_width / max(array_height, array_width) >= 64:
                 util_rate = M / array_height / 0.98 
-#                print("SKKIM TEST4")
                 return ceil(
                     M * N * K / array_height / array_width / mac_per_clock / util_rate
                 ), util_rate
@@ -950,18 +883,11 @@ class Matmul(Operator):
             assert M < array_height and N < array_width
             if K / max(array_height, array_width) >= 64:
                 util_rate = M / array_height * N / array_width / 0.98 
-#                print(f"Utilization Rate 3: {util_rate:.3f}")
-#                print("SKKIM TEST5")
-#                print("SKKIM DEBUG", M , N , K , array_height , array_width , mac_per_clock , util_rate)
                 return ceil(
                     M * N * K / array_height / array_width / mac_per_clock / util_rate
                 ), util_rate
 
-        # print('start look up table')
-#        print("Look-up table indices:", look_up_table.index)
         key = (M,N,K,array_height, array_width, dataflow)
-#        print("Look-up key:", key) 
-#        print("Is exist", look_up_table.loc[key]) 
         try:
             cycle_count = look_up_table.loc[
                 (M, N, K, array_height, array_width, dataflow), "cycle_count"
@@ -977,9 +903,7 @@ class Matmul(Operator):
                 util_rate = look_up_table.loc[
                     (N, M, K, array_height, array_width, dataflow), "util_rate"
                 ].item()
-#                print(f"Utilization Rate 4: {util_rate:.3f}")
             except KeyError:
-                # print('not found in look up table')
                 config = f"./systolic_array_model/temp/systolic_array_{os.getpid()}.cfg"
                 with open(config, "w") as f:
                     f.writelines("[general]\n")
@@ -1016,11 +940,6 @@ class Matmul(Operator):
 
                 cycle_count = s.runner.single_layer_sim_object_list[0].total_cycles
                 util_rate = s.runner.single_layer_sim_object_list[0].overall_util / 100
-                '''
-                ~/miniconda3/envs/llmcompass_ae/lib/python3.9/site-packages/scalesim$ vim single_layer_sim.py
-                self.overall_util = (self.num_compute * 100) / (self.total_cycles * self.num_mac_unit)
-                '''
-#                print(f"Utilization Rate 5: {util_rate:.3f}")
                 with open(
                     f"./systolic_array_model/look_up_table_{array_height}_{array_width}.csv",
                     "a",
@@ -1034,20 +953,6 @@ class Matmul(Operator):
                 ]
                 if len(look_up_table) % 10 == 0:
                     look_up_table.sort_index(inplace=True)
-        # if (
-        #     dataflow == "os"
-        # ):  # scalesim assumes collecting output is not on critical path in os
-        #     cycle_count += min(array_height, array_width, M, N)
-        # if True:
-        #     print(f"{M}x{N}x{K}x{array_height}x{array_width}x{dataflow}: {cycle_count}")
-        # new_table = look_up_table[~look_up_table.index.duplicated(keep='first')]
-        # if look_up_table.shape[0]-new_table.shape[0]>=1:
-        #     print(look_up_table)
-        #     print(look_up_table.duplicated(keep=False))
-        #     exit()
-        # print(f'end: {M} {N} {K} {array_height} {array_width} {mac_per_clock} {dataflow}')
-        # assert isinstance(cycle_count, float), f"cycle_count: {cycle_count}"
-#        print("SKKIM TEST6")
         return ceil(cycle_count / mac_per_clock), util_rate
 
 

@@ -18,10 +18,6 @@ from software_model.sw_softmax import Softmax
 class FlashAttention(Operator):
     def __init__(self, data_type: DataType):
         super().__init__(0, 0, 0, 0, data_type)
-#        self.x_shape = None
-#        self.Wq_shape = None
-#        self.Wk_shape = None
-#        self.Wv_shape = None
         self.Query = None
         self.Key = None
         self.Value = None
@@ -32,15 +28,11 @@ class FlashAttention(Operator):
         self.look_up_table = None
         self.best_mapping = None
 
-#    def __call__(self, x: Tensor, Wq: Tensor, Wk: Tensor, Wv: Tensor, sram_size:int, seq_len: int, head_dim: int) -> Tensor:
     def __call__(self, input_q: Tensor, input_k: Tensor, input_v: Tensor, input_w0: Tensor, sram_size:int, seq_len: int, dim: int, head: int) -> Tensor:
         # [bs, M, K] * [K, N] = [bs, M, N]
         self.seq_len = seq_len # prompt + KV cache + input(1) = 1024 + 2048 + 1 -> 3073
         self.d = dim
         self.d_h = dim // head
-        # Set block sizes
-#        self.B_c = math.ceil(sram_size / (4 * self.d))  # Ensure block size fits in SRAM -> 1024
-#        self.B_r = min(math.ceil(sram_size / (4 * self.d)), self.d)  # min(1024,128) -> 128
         self.B_c = math.ceil(sram_size / (4 * self.d)) # -> 64
         self.B_r = self.d_h
 
@@ -56,8 +48,6 @@ class FlashAttention(Operator):
         self.output_shape = input_q.shape
         flops = 0
         
-#        print("Check in block size:", self.B_c, self.B_r, self.T_c, self.T_r, self.seq_len)
-#        print("Check in flash attention - QKV:", self.Query.shape, self.Key.shape, self.Value.shape)
         for j in range(self.T_c):
             for i in range(self.T_r):
 
@@ -66,12 +56,7 @@ class FlashAttention(Operator):
                 self.N = self.Key.shape[-1]
                 self.K = self.Key.shape[-2]
 
-#                print(f'#SKKIM flash sttention dimension: {self.M}, {self.N}, {self.K}')
 
-                # TODO: skkim - 1. call computational_graph, 2. flop_count, 3. io_count for softmax, SV, W0_projection 
-#                self.computational_graph = self.ComputationalGraph(
-#                    self.M, self.N, self.K, self.data_type
-#                )
                 self.flop_count += 2 * self.M * self.K * self.N
                 self.io_count += self.M * self.K + self.K * self.N + self.M * self.N
 
@@ -217,7 +202,6 @@ class FlashAttention(Operator):
         flash_attention_time_tick = 0
 
         previous_compute_cycle = 0
-#        w0_latency = 0
         Q_i_list = self.split_to_tile(self.Query.shape[-2], self.B_r)
         K_j_list = self.split_to_tile(self.Key.shape[-1],self.B_c)
         V_j_list = self.split_to_tile(self.Value.shape[-2],self.B_c)
@@ -228,7 +212,6 @@ class FlashAttention(Operator):
             K_j.shape[-1] = K_j_list[j]
             V_j = self.Value.copy()
             V_j.shape[-2] = V_j_list[j]
-#            print("K_j:", K_j)
             for i in range(self.T_r):
                 Q_i = self.Query.copy()
                 Q_i.shape[-2] = Q_i_list[i]
@@ -236,17 +219,10 @@ class FlashAttention(Operator):
                 self.M = Q_i.shape[-2]
                 self.N = K_j.shape[-1]
                 self.K = K_j.shape[-3] * K_j.shape[-2]
-#                print("SKKIM QKT size(M,N,K)", self.M, self.N, self.K)
-#                print("SKKIM copy test", self.Key, self.Key.copy(), K_j)
-#                print("SKKIM QKV (Q,K,V)", self.Query.shape, self.Key.shape, self.Value.shape)
-#                print("SKKIM QKV tile (Q,K,V)", Q_i.shape, K_j.shape, V_i.shape)
                 self.computational_graph = self.ComputationalGraph(
                     self.M, self.N, self.K, self.data_type
                 )
                 tmp_read_byte, tmp_read_cycle, tmp_compute_cycle, tmp_write_byte, tmp_write_cycle, tmp_qkT_latency, tmp_sa_util_rate = self.matmul_compile_and_simulate(pcb_module, 'projection_and_qk')
-#                print(tmp_read_byte, tmp_read_cycle, tmp_compute_cycle, tmp_write_byte, tmp_write_cycle, tmp_qkT_latency)
-# skkim: do not consider first io cycle(1 read, 0 compute)
-###################################################QKT############################################################################
                 flash_attention_tot_cycle += ( max(tmp_read_cycle - previous_compute_cycle , 0) + tmp_compute_cycle)
                 flash_attention_io_cycle += tmp_read_cycle 
                 flash_attention_compute_cycle += tmp_compute_cycle
@@ -270,11 +246,7 @@ class FlashAttention(Operator):
                 print("sa util[%](Y3) : ", tmp_sa_util_rate * 100)
                 print("va util[%](Y3) : ", 0 )
 
- #               print("check softmax")
-##################################################softmax###########################################################################
-#                print("SKKIM softmax size(M,N)", self.M, self.N)
                 _, tmp_read_cycle, tmp_compute_cycle, tmp_write_byte, tmp_write_cycle, tmp_softmax_latency, tmp_va_util_rate = self.softmax_compile_and_simulate(pcb_module, 'mha_softmax')
-#                print(tmp_read_byte, tmp_read_cycle, tmp_compute_cycle, tmp_write_byte, tmp_write_cycle, tmp_softmax_latency)
                 flash_attention_tot_cycle += tmp_compute_cycle
                 flash_attention_compute_cycle += tmp_compute_cycle
                 flash_attention_time_tick += tmp_compute_cycle
@@ -289,20 +261,13 @@ class FlashAttention(Operator):
                 print("sa util[%](Y3) : ", 0)
                 print("va util[%](Y3) : ", tmp_va_util_rate * 100 )
 
-##########################################################SV########################################################################
-#                print("check sv")
-                #self.M = Q_i.shape[2]
-                #self.N = V_j.shape[-1]
-                #self.K = K_j.shape[-1] * Q_i.shape[0] * Q_i.shape[1]
                 self.M = Q_i.shape[-2]
                 self.N = V_j.shape[-1]
                 self.K = V_j.shape[-3] * V_j.shape[-2]
                 self.computational_graph = self.ComputationalGraph(
                     self.M, self.N, self.K, self.data_type
                 )
-#                print("SKKIM SV size(M,N,K)", self.M, self.N, self.K)
                 _, tmp_read_cycle, tmp_compute_cycle, tmp_write_byte, tmp_write_cycle, tmp_sv_latency, tmp_sa_util_rate = self.matmul_compile_and_simulate(pcb_module, 'sv')
-#                print(tmp_read_byte, tmp_read_cycle, tmp_compute_cycle, tmp_write_byte, tmp_write_cycle, tmp_sv_latency)
                 flash_attention_tot_cycle += (tmp_compute_cycle + tmp_write_cycle)
                 flash_attention_io_cycle += tmp_write_cycle 
                 flash_attention_compute_cycle += tmp_compute_cycle
@@ -322,30 +287,13 @@ class FlashAttention(Operator):
                 print("sa util[%](Y3) : ", tmp_sa_util_rate * 100)
                 print("va util[%](Y3) : ", 0 )
 
-#                print("memory bw util[%](Y1) :", (skkim_io_byte/skkim_io_cycle)/chiplet_module.compute_module.l2_bandwidth_per_cycle * 100)
-#                print("sram occupancy[%](Y2) :", ( current_batch_M_K_read_count+ current_batch_K_N_read_count +  current_batch_M_N_read_count) * data_type.word_size * 2 / chiplet_module.compute_module.core.SRAM_size * 100) # double buffering = True
-#                print("sa util[%](Y3) : ", util_rate)
-
                 flash_attention_tot_cycle = 0
                 flash_attention_io_cycle = 0
                 flash_attention_compute_cycle = 0
-                '''
-                print("check w0_proj")
-                self.M = size(Q_i.shape[:-1])
-                self.K = V_j.shape[-1]
-                self.N = self.W0.shape[-1]
-                self.computational_graph = self.ComputationalGraph(
-                    self.M, self.N, self.K, self.data_type
-                )
- 
-                tmp_read_byte, tmp_read_cycle, tmp_compute_cycle, tmp_write_byte, tmp_write_cycle, tmp_w0_latency = self.matmul_compile_and_simulate(pcb_module, 'w0_proj')
-                print(tmp_read_byte, tmp_read_cycle, tmp_compute_cycle, tmp_write_byte, tmp_write_cycle, tmp_w0_latency)
-                '''
 
                 qkT_latency += tmp_qkT_latency
                 softmax_latency = tmp_softmax_latency
                 sv_latency += tmp_sv_latency
-#                w0_latency += tmp_w0_latency
 
         flash_attention_time_tick += (tmp_compute_cycle + tmp_write_cycle)
         print("total cycle(X) :", flash_attention_time_tick)
@@ -389,7 +337,6 @@ class FlashAttention(Operator):
             l0_N_tiling_factor,
             l0_K_tiling_factor,
         ) in [(1, 1, 1)]:
-#                    ) in [(1, 2, 1)]: #skkim
             mapping = self.matmul_Mapping(
                 l2_tile_M,
                 l2_tile_N,
@@ -404,9 +351,6 @@ class FlashAttention(Operator):
                 l0_N_tiling_factor,
                 l0_K_tiling_factor,
             )
-#                        mapping.display()
-            # start=time.time()
-#            cycle_count = self.matmul_simulate(
             read_byte, read_cycle, compute_cycle, write_byte, write_cycle, cycle_count, sa_util_rate = self.matmul_simulate(
                 self.computational_graph,
                 mapping,
@@ -415,9 +359,6 @@ class FlashAttention(Operator):
                 next_ops_name
             )
 
-            # end=time.time()
-            # print(f'simulation time: {end-start}')
-#            print("compare cycle count, min cycle count: ", cycle_count, min_cycle_count)
             if cycle_count < min_cycle_count:
                 min_cycle_count = cycle_count
                 best_mapping = mapping
@@ -427,25 +368,14 @@ class FlashAttention(Operator):
                 best_write_byte = write_byte
                 best_write_cycle = write_cycle
                 best_sa_util_rate = sa_util_rate
-#            print("compare done. cycle count, mapping: ", min_cycle_count, best_mapping)
         self.best_mapping = best_mapping
         M_size = self.best_mapping.l1_tile_M
         N_size = self.best_mapping.l1_tile_N
         K_size = self.best_mapping.l1_tile_K
-#        print("M,N,K: ", M_size, N_size, K_size)
         if mapping.is_l2_double_buffering:
             occupancy = (M_size*N_size + M_size*K_size + K_size*N_size) * self.data_type.word_size * 2 / pcb_module.compute_module.core.SRAM_size * 100
         else:
             occupancy = (M_size*N_size + M_size*K_size + K_size*N_size) * self.data_type.word_size / pcb_module.compute_module.core.SRAM_size * 100
-#        print("CCCHECK",occupancy,M_size, N_size,K_size,self.data_type.word_size,pcb_module.compute_module.core.SRAM_size)
-#        print("Tile size, ",M_size, N_size, K_size)
-#        print("Word size, ",self.data_type.word_size)
-#        print("SRAM size, ",pcb_module.compute_module.core.SRAM_size)
-#        print("IO BW, ",pcb_module.compute_module.l2_bandwidth_per_cycle)
-#        print("SRAM Util, ",occupancy)
-#        print("Min Cycle, ",min_cycle_count)
-        # if self.best_mapping is not None:
-        #     self.best_mapping.display()
         self.best_cycle_count = min_cycle_count
         self.read_byte = best_read_byte
         self.read_cycle = best_read_cycle
@@ -454,12 +384,10 @@ class FlashAttention(Operator):
         self.write_cycle = best_write_cycle
         self.sa_util_rate = best_sa_util_rate
 
-        #self.best_latency = min_cycle_count / pcb_module.compute_module.clock_freq
         self.best_latency = min_cycle_count
         self.latency = self.best_latency
         self.best_mapping.display()
 
-#        print("Occupancy(%)/sram:",occupancy,"/",pcb_module.compute_module.core.SRAM_size)
         return self.read_byte, self.read_cycle, self.compute_cycle, self.write_byte, self.write_cycle, self.latency, self.sa_util_rate
 
     def matmul_simulate(
@@ -578,10 +506,6 @@ class FlashAttention(Operator):
             ceil(M / l2_tile_M), ceil(N / l2_tile_N), ceil(K / l2_tile_K), mapping.l2_loop_order
         ):
             current_tile = l2_tiles[m, n, k]
-#            print(f"Processing Tile ({m}, {n}, {k}):")
-#            print(f"  Read Byte: {current_tile.total_read_byte}")
-#            print(f"  Write Byte: {current_tile.total_write_byte}")
-#            print(f"  Compute Cycle Count: {current_tile.total_compute_cycle_count}")
 
             current_tile_read_cycles = (
                 current_tile.M_K_io_cycle_count + current_tile.K_N_io_cycle_count
@@ -614,10 +538,6 @@ class FlashAttention(Operator):
 
         # Add final tile cycles
         final_tile = l2_tiles[-1, -1, -1]
-#        print("Final Tile:")
-#        print(f"  Read Byte: {final_tile.total_read_byte}")
-#        print(f"  Write Byte: {final_tile.total_write_byte}")
-#        print(f"  Compute Cycle Count: {final_tile.total_compute_cycle_count}")
 
         total_cycle_count += (
             final_tile.M_N_io_cycle_count + final_tile.compute_cycle_count
@@ -697,10 +617,8 @@ class FlashAttention(Operator):
         self.best_latency = min_cycle_count / pcb_module.compute_module.clock_freq
         self.latency = self.best_latency
         self.va_util_rate = best_va_util_rate
-        # self.best_mapping.display()
         M_size = self.best_mapping.l1_tile_M
         N_size = self.best_mapping.l1_tile_N
-#        print("Tile size, ",M_size, N_size)
         
         return self.read_byte, self.read_cycle, self.compute_cycle, self.write_byte, self.write_cycle, self.latency, self.va_util_rate
 
@@ -802,7 +720,6 @@ class FlashAttention(Operator):
             self.skkim_va_util_rate = skkim_va_util_rate
 
 
-#self.read_cycle_count, self.write_cycle_count, self.compute_cycle_count = 0
 
         def simulate_l2_tile_io_cycle_count(
             self, M: int, N: int, data_type: DataType, chiplet_module: Device
@@ -876,7 +793,6 @@ class FlashAttention(Operator):
             ops_name : str,
             next_ops_name : str,
         ):
-            # print(f'L2 tile: {M} {N} {K}')
             self.M = M
             self.N = N
             self.K = K
@@ -898,8 +814,6 @@ class FlashAttention(Operator):
             self.M_N_io_cycle_count = self.simulate_l2_tile_io_cycle_count(
                 M, N, data_type, pcb_module
             )
-#            print("#####################", self.M_K_io_cycle_count, self.K_N_io_cycle_count, self.M_N_io_cycle_count)
-#            self.compute_cycle_count = self.simulate_l2_tile_compute_cycle_count(
             total_read_byte, total_read_cycle_count, total_compute_cycle_count, total_write_byte, total_write_cycle_count, skkim_total_cycle_count, skkim_sa_util_rate = self.simulate_l2_tile_compute_cycle_count(
                 M, N, K, data_type, mapping, pcb_module, look_up_table, ops_name
             )
@@ -913,13 +827,6 @@ class FlashAttention(Operator):
             self.skkim_total_cycle_count = skkim_total_cycle_count
             self.skkim_sa_util_rate = skkim_sa_util_rate
 
-            #print("class Matmul > def compile_and_simulate > def simulate > class L2TileSimulator > def __init__")
-            #print("result of simulate_l2_tile_io_cycle_count: ")
-            #print(self.M_K_io_cycle_count)
-            #print(self.K_N_io_cycle_count)
-            #print(self.M_N_io_cycle_count)
-            #print("result of simulate_l2_tile_compute_cycle_count: ")
-            #print(self.compute_cycle_count)
 
         def simulate_l2_tile_io_cycle_count(
             self, M: int, N: int, data_type: DataType, chiplet_module: Device
@@ -1081,16 +988,6 @@ class FlashAttention(Operator):
             skkim_total_cycle_count = total_read_cycle_count + total_write_cycle_count + total_compute_cycle_count
             skkim_sa_util_rate = tile_obj.util_rate
 
-            # Debugging: Print final totals
-#            print("Final Totals:")
-#            print(f"Total Read Bytes: {total_read_byte}")
-#            print(f"Total Write Bytes: {total_write_byte}")
-#            print(f"Total Read Cycle Count: {total_read_cycle_count}")
-#            print(f"Total Write Cycle Count: {total_write_cycle_count}")
-#            print(f"Total Compute Cycle Count: {total_compute_cycle_count}")
-#            print(f"Total Cycle Count: {skkim_total_cycle_count}")
-
-            print(f"skkim Total Read Bytes: {current_batch_M_K_read_count}, {current_batch_K_N_read_count}, {current_batch_M_N_read_count}")
             return (
                 total_read_byte,
                 total_read_cycle_count,
@@ -1190,7 +1087,6 @@ class FlashAttention(Operator):
             )
             utilization = self.calculate_softmax_vector_utilization(total_cycle_count, M, N, pcb_module)
 
-#            print("SKKIM softmax",  pcb_module.compute_module.core.vector_unit.total_vector_flops_per_cycle)
             return utilization, total_cycle_count
 
 
@@ -1215,7 +1111,6 @@ class FlashAttention(Operator):
             self.sram_loads, self.memory_usage = self.simulate_l1_tile_sram_usage(
                 M, N, K, data_type, chiplet_module
             )
-#            print("Load:",self.sram_loads, "Occu:",self.memory_usage)
 
         def simulate_l1_tile_sram_usage(
             self,
@@ -1248,8 +1143,6 @@ class FlashAttention(Operator):
             M_tiling_factor = mapping.l0_M_tiling_factor
             N_tiling_factor = mapping.l0_N_tiling_factor
             K_tiling_factor = mapping.l0_K_tiling_factor
-#            print(">>>>>>",M_tiling_factor ,K_tiling_factor ,N_tiling_factor)
-#            print(">>>>>>",chiplet_module.compute_module.core.systolic_array_count)
             assert (
                 M_tiling_factor * K_tiling_factor * N_tiling_factor
                 <= chiplet_module.compute_module.core.systolic_array_count
@@ -1264,19 +1157,12 @@ class FlashAttention(Operator):
                     chiplet_module.compute_module.core.systolic_array.mac_per_cycle,
                     mapping.dataflow,
             )
-#            print("SKKIM CHECK (MAC ", chiplet_module.compute_module.core.systolic_array.mac_per_cycle, "):",tmp_compute_cycle)
 
             compute_cycle_count = ceil(tmp_compute_cycle + (K_tiling_factor - 1)
                 * M
                 * N
                 / chiplet_module.compute_module.core.vector_unit.total_vector_flops_per_cycle
             )
-#            print("###########################", compute_cycle_count)
-
-#            print("sa util[%](Y3) : ", util_rate)
-#`            return compute_cycle_count
-#            print("SKKIM matmul1", tmp_compute_cycle)
-#            print("SKKIM matmul2", compute_cycle_count, M, N)
             return compute_cycle_count, util_rate
 
     @staticmethod
@@ -1290,11 +1176,9 @@ class FlashAttention(Operator):
         mac_per_clock,
         dataflow="os",
     ):
-#        print(f'SKKIM start: {M} {N} {K} {array_height} {array_width} {mac_per_clock} {dataflow}')
         util_rate = -1
         assert M * N * K * array_height * array_width * mac_per_clock != 0
         if M >= array_height and N >= array_width:
-#            print(f"Utilization Rate 6: 1")
             util_rate = 1
             if (
                 M * N * K / array_height / array_width / max(array_height, array_width)
@@ -1313,7 +1197,6 @@ class FlashAttention(Operator):
         elif M >= array_height and N < array_width:
             if K * M / array_height / max(array_height, array_width) >= 64:
                 util_rate = N / array_width / 0.98 
-#                print(f"Utilization Rate 1: {util_rate:.3f}")
                 return ceil(
                     M * N * K / array_height / array_width / mac_per_clock / util_rate
                 ), util_rate
@@ -1328,12 +1211,10 @@ class FlashAttention(Operator):
             assert M < array_height and N < array_width
             if K / max(array_height, array_width) >= 64:
                 util_rate = M / array_height * N / array_width / 0.98 
-#                print(f"Utilization Rate 3: {util_rate:.3f}")
                 return ceil(
                     M * N * K / array_height / array_width / mac_per_clock / util_rate
                 ), util_rate
 
-        # print('start look up table')
         try:
             cycle_count = look_up_table.loc[
                 (M, N, K, array_height, array_width, dataflow), "cycle_count"
@@ -1349,9 +1230,7 @@ class FlashAttention(Operator):
                 util_rate = look_up_table.loc[
                     (N, M, K, array_height, array_width, dataflow), "util_rate"
                 ].item()
-#                print(f"Utilization Rate 4: {util_rate:.3f}")
             except KeyError:
-                # print('not found in look up table')
                 config = f"./systolic_array_model/temp/systolic_array_{os.getpid()}.cfg"
                 with open(config, "w") as f:
                     f.writelines("[general]\n")
@@ -1388,11 +1267,6 @@ class FlashAttention(Operator):
 
                 cycle_count = s.runner.single_layer_sim_object_list[0].total_cycles
                 util_rate = s.runner.single_layer_sim_object_list[0].overall_util / 100
-                '''
-                ~/miniconda3/envs/llmcompass_ae/lib/python3.9/site-packages/scalesim$ vim single_layer_sim.py
-                self.overall_util = (self.num_compute * 100) / (self.total_cycles * self.num_mac_unit)
-                '''
-#                print(f"Utilization Rate 5: {util_rate:.3f}")
                 with open(
                     f"./systolic_array_model/look_up_table_{array_height}_{array_width}.csv",
                     "a",
@@ -1406,19 +1280,6 @@ class FlashAttention(Operator):
                 ]
                 if len(look_up_table) % 10 == 0:
                     look_up_table.sort_index(inplace=True)
-        # if (
-        #     dataflow == "os"
-        # ):  # scalesim assumes collecting output is not on critical path in os
-        #     cycle_count += min(array_height, array_width, M, N)
-        # if True:
-        #     print(f"{M}x{N}x{K}x{array_height}x{array_width}x{dataflow}: {cycle_count}")
-        # new_table = look_up_table[~look_up_table.index.duplicated(keep='first')]
-        # if look_up_table.shape[0]-new_table.shape[0]>=1:
-        #     print(look_up_table)
-        #     print(look_up_table.duplicated(keep=False))
-        #     exit()
-        # print(f'end: {M} {N} {K} {array_height} {array_width} {mac_per_clock} {dataflow}')
-        # assert isinstance(cycle_count, float), f"cycle_count: {cycle_count}"
         return ceil(cycle_count / mac_per_clock), util_rate
 
 

@@ -308,8 +308,6 @@ class Softmax(Operator):
                 is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, m, n, 0, ops_name)
                 write_or_free_ended = False
                 while(is_loaded == False): 
-                    #print('need softmax tile', ops_name, m, n)
-                    #print('sram status', sram_status)
                     loadable_amount = pcb_module.compute_module.core.SRAM_size
                     if(write_or_free_ended):
                         remained_amount, sram_status, sram_table, tot_find_overhead = sram.load_tile_to_sram(
@@ -388,7 +386,6 @@ class Softmax(Operator):
                     print('sram occupancy[%] :', sram.get_sramutil(sram_status, pcb_module)/pcb_module.compute_module.core.SRAM_size * 100)
                     previous_m_n_k = '_' + str(m) + '_' + str(n) + '_0'
 
-#                    print('sram status :', sram_status)
 
             sram.store_sram_status(sram_status, sram_table)
 

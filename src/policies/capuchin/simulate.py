@@ -24,10 +24,7 @@ if __name__ == "__main__":
     block_size = 64
     sr_data_type = "int8"
 
-#    if quant == "w4a8":
-#        model_dim = model_dim//2
 
-#    config_file = './Tiles/tile_size.json'
     if len(sys.argv) < 3:
         print("Usage: python script.py <config_file>")
         sys.exit(1)

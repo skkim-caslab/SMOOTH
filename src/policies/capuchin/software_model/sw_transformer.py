@@ -35,10 +35,6 @@ class TransformerBlockInitComputationTP(Operator):
         self.W2 = Tensor([4 * d // device_count, d], data_type)
 
         ## Flash attention operators
-#        if self.use_flash_attention:
-#            self.flash_attention_blocks = []
-#            for i in range(self.n_heads):
-#                self.flash_attention_blocks.append(self.init_flash_attention_block(data_type))
         self.MHA_reshape = Reshape(data_type)
 
         ## multi-head attention
@@ -130,11 +126,8 @@ class TransformerBlockInitComputationTP(Operator):
         if dev_cnt > 1:
             mha_output = self.allreduce_mha(mha_output)
 
-#        print("Check:", mha_output.shape)
         # feed-forward network
-#        h1 = self.H_matmul1(h0, self.W1)  # [b, 1, 4 * d / dev_cnt]
         h1 = self.H_matmul1(mha_output, self.W1, config_file)  # [b, 1, 4 * d / dev_cnt]
-#        print("Check:", h1.shape) # [16,1,8192]
         assert h1.shape == [b, s, 4 * d // dev_cnt]
         h1 = self.H_gelu(h1)
         h2 = self.H_matmul2(h1, self.W2, config_file)  #  [b, 1, d]
@@ -417,8 +410,6 @@ class TransformerBlockInitComputationTP(Operator):
                 + ffn_layernorm_latency
                 + gelu_latency
             )
-            print(f"Linear cycles, {linear_latency}")
-            print(f"NON-linear cycles, {non_linear_latency}")
             print(f"Latency,   {self.latency/device.compute_module.clock_freq*24}")
         return self.latency
 
@@ -441,10 +432,6 @@ class TransformerBlockAutoRegressionTP(Operator):
         self.W2 = Tensor([4 * d // device_count, d], data_type)
 
         ## Flash attention operators
-#        if self.use_flash_attention:
-#            self.flash_attention_blocks = []
-#            for i in range(self.n_heads):
-#                self.flash_attention_blocks.append(self.init_flash_attention_block(data_type))
         self.MHA_reshape = Reshape(data_type)
 
         ## multi-head attention
@@ -497,7 +484,6 @@ class TransformerBlockAutoRegressionTP(Operator):
         d_h = d // h
         config_file = self.config_file
 
-#        config_file = './Tiles/tile_size.json'
 
         if self.K_cache is None or self.V_cache is None:
             # KV cache
@@ -506,18 +492,6 @@ class TransformerBlockAutoRegressionTP(Operator):
 
         if self.use_flash_attention:
             M = self.device.compute_module.core.SRAM_size
-#            mha_output = self.flash_attention(q_T, K_T, V_T, s, M)
-
-#            B_c = math.ceil(M/(4*d_h))
-#            B_r = min(math.ceil(M/(4*d_h)), d_h)
-#            print("Br, Bc: ", B_r, B_c)
-#            print("Check Q block num:", s / B_r)
-#            print("Check input Q:", x.shape, self.Wq.shape)
-#            print("Check input K:", x.shape, self.Wk.shape)
-#            print("Check input V:", x.shape, self.Wv.shape)
-#            print("Wq, Wk, Wv: ", self.Wq, self.Wk, self.Wv)
-#            print("Data type: ", self.data_type)
-
             q = self.Q_proj(x, self.Wq, config_file)
             k = self.K_proj(x, self.Wk, config_file)
             v = self.V_proj(x, self.Wv, config_file)
@@ -540,25 +514,16 @@ class TransformerBlockAutoRegressionTP(Operator):
 
 
             fa_output = self.flash_attention(q_T, K_T, V_T, self.W0, M, s + 1, d, h)
-            print("Check input QKT:", q_T.shape, K_T.shape, V_T.shape, fa_output.shape)
             h0 = self.H_transpose(fa_output, [0, 2, 1, 3])  # [b, 1, h / dev_cnt, d_h]
             h0 = self.H_reshape(h0, [b, 1, d // dev_cnt])
             mha_output = self.H_matmul0(h0, self.W0, config_file)  # [b, 1, d]
-#            fa_output = self.MHA_reshape(mha_output, [b, 1, d // dev_cnt])
 
-#            h0 = self.H_reshape(h0, [b, 1, d // dev_cnt])
-#            mha_output = self.H_matmul0(h0, self.W0)  # [b, 1, d]
-
-#            mha_output = self.flash_attention(x, self.Wq, self.Wk, self.Wv, M, s, d_h)
         else:
 
             q = self.Q_proj(x, self.Wq, config_file)
             k = self.K_proj(x, self.Wk, config_file)
             v = self.V_proj(x, self.Wv, config_file)
 
-            print("Check input Q:", x.shape, self.Wq.shape, q.shape)
-            print("Check input K:", x.shape, self.Wk.shape, k.shape)
-            print("Check input V:", x.shape, self.Wv.shape, v.shape)
             q = self.Q_reshape(q, [b, 1, h // dev_cnt, d_h])
             k = self.K_reshape(k, [b, 1, h // dev_cnt, d_h])
             v = self.V_reshape(v, [b, 1, h // dev_cnt, d_h])
@@ -577,25 +542,17 @@ class TransformerBlockAutoRegressionTP(Operator):
             self.V_cache = V_T
 
             a = self.Q_mul_K(q_T, K_T, config_file)  # [b, h / dev_cnt, 1, s+1]
-            print("Check input QKT:", q_T.shape, K_T.shape, a.shape)
             a_prob = self.A_softmax(a, s + 1, config_file)
             h0 = self.A_mul_V(a_prob, V_T, config_file)  # [b, h / dev_cnt, 1, d_h]
-            print("Check input AV:", a_prob.shape, V_T.shape, h0.shape)
             h0 = self.H_transpose(h0, [0, 2, 1, 3])  # [b, 1, h / dev_cnt, d_h]
             h0 = self.H_reshape(h0, [b, 1, d // dev_cnt])
             mha_output = self.H_matmul0(h0, self.W0, config_file)  # [b, 1, d]
-            print("Check output:", mha_output.shape) #[16,1,2048]
         mha_output = self.layer_norm0(mha_output)
-#        print("Check:", mha_output.shape)  # [16,1,2048]
         assert mha_output.shape == [b, 1, d]
         if dev_cnt > 1:
             mha_output = self.allreduce_mha(mha_output)
 
-#        print("Check:", mha_output.shape)
-        # feed-forward network
-#        h1 = self.H_matmul1(h0, self.W1)  # [b, 1, 4 * d / dev_cnt]
         h1 = self.H_matmul1(mha_output, self.W1, config_file)  # [b, 1, 4 * d / dev_cnt]
-#        print("Check:", h1.shape) # [16,1,8192]
         assert h1.shape == [b, 1, 4 * d // dev_cnt]
         h1 = self.H_gelu(h1)
         h2 = self.H_matmul2(h1, self.W2, config_file)  #  [b, 1, d]
@@ -880,8 +837,6 @@ class TransformerBlockAutoRegressionTP(Operator):
                 + ffn_layernorm_latency
                 + gelu_latency
             )
-            print(f"Linear cycles, {linear_latency}")
-            print(f"NON-linear cycles, {non_linear_latency}")
             print(f"Latency,   {self.latency/device.compute_module.clock_freq*24}")
         return self.latency
 

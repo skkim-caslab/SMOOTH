@@ -81,8 +81,6 @@ class GeLU(Operator):
             / pcb_module.compute_module.l2_bandwidth_per_cycle
             / pcb_module.compute_module.clock_freq
         )
-        print("DEBUG SKKIM",total_io_count, pcb_module.io_module.bandwidth, pcb_module.compute_module.l2_bandwidth_per_cycle, pcb_module.compute_module.clock_freq
-, io_latency)
 
         total_flop_count = M * (
             10 + pcb_module.compute_module.core.vector_unit.flops_per_exp
@@ -147,7 +145,6 @@ class GeLU(Operator):
             print("current cycle(X3) : ", max(compute_cycle_count, io_cycle_count))
             print("memory bw util[%](Y1) : ", 100)
             print("sram status: ", sram_status)
-#            print("sram occupancy[%](Y2) : ", sram.get_sramutil(sram_status) / pcb_module.compute_module.core.SRAM_size *100)
             print("sa util[%](Y3) : ", 0)
             print("va util[%](Y3) : ", 100)
 
@@ -189,6 +186,5 @@ class GeLU(Operator):
             end = time.time()
             latencies.append(end - start)
         avg_overhead = statistics.median(latencies)
-        # print('GPU kernel launch overhead: ', avg_overhead*1e3, 'ms')
         print(latencies)
         return avg_overhead

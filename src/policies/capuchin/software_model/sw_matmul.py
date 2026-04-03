@@ -43,14 +43,6 @@ class BatchedMatmul(Operator):
         return output
 
     def compile_and_simulate(self, pcb_module: Device, ops_name: str):
-        """
-        matmul = Matmul(self.data_type)
-        _ = matmul(Tensor([self.M, self.K]), Tensor([self.K, self.N]))
-        matmul_latency1 = (
-            matmul.compile_and_simulate(pcb_module, compile_mode) * self.bs
-        )
-        """
-
         matmul = Matmul(self.data_type)
         _ = matmul(
             Tensor([self.M, self.K * self.bs]), Tensor([self.K * self.bs, self.N]), self.config_file
@@ -64,8 +56,6 @@ class BatchedMatmul(Operator):
             / pcb_module.io_module.bandwidth
         )
         self.latency = matmul_latency2
-        #self.latency = min(matmul_latency1, matmul_latency2)
-        #print(f"Batchtest, {self.latency} , {matmul_latency1}, {matmul_latency2}")
         return self.latency
 
 class Matmul(Operator):
@@ -98,7 +88,6 @@ class Matmul(Operator):
         )
         self.flop_count = 2 * self.M * self.K * self.N
         self.io_count = self.M * self.K + self.K * self.N + self.M * self.N
-        # print(f'{self.M}, {self.N}, {self.K}')
         with open(config_file, 'r') as f:
             self.tile_config = json.load(f)
         return output
@@ -204,7 +193,6 @@ class Matmul(Operator):
         M = self.computational_graph.M
         N = self.computational_graph.N
         K = self.computational_graph.K
-        print("DEBUG", ops_name, M,N,K)
 
         l2_tile_M = self.computational_graph.M
         l2_tile_N = self.computational_graph.N
@@ -229,7 +217,6 @@ class Matmul(Operator):
             l0_N_tiling_factor,
             l0_K_tiling_factor,
         ) in [(1, 1, 1)]:
-#                    ) in [(1, 2, 1)]: #skkim
             mapping = self.Mapping(
                 l2_tile_M,
                 l2_tile_N,
@@ -244,8 +231,6 @@ class Matmul(Operator):
                 l0_N_tiling_factor,
                 l0_K_tiling_factor,
             )
-#                        mapping.display()
-            # start=time.time()
             cycle_count = self.simulate(
                 self.computational_graph,
                 mapping,
@@ -253,8 +238,6 @@ class Matmul(Operator):
                 ops_name,
                 next_ops_name
             )
-            # end=time.time()
-            # print(f'simulation time: {end-start}')
             if cycle_count < min_cycle_count:
                 min_cycle_count = cycle_count
                 best_mapping = mapping
@@ -267,20 +250,15 @@ class Matmul(Operator):
             occupacy = (M_size*N_size + M_size*K_size + K_size*N_size) * self.data_type.word_size * 2 / pcb_module.compute_module.core.SRAM_size
         else:
             occupacy = (M_size*N_size + M_size*K_size + K_size*N_size) * self.data_type.word_size / pcb_module.compute_module.core.SRAM_size
-#        print("CCCHECK",occupacy,M_size, N_size,K_size,self.data_type.word_size,pcb_module.compute_module.core.SRAM_size)
         print("Tile size, ",M_size, N_size, K_size)
         print("Word size, ",self.data_type.word_size)
         print("SRAM size, ",pcb_module.compute_module.core.SRAM_size)
         print("IO BW, ",pcb_module.compute_module.l2_bandwidth_per_cycle)
         print("SRAM Util, ",occupacy)
         print("Min Cycle, ",min_cycle_count)
-        # if self.best_mapping is not None:
-        #     self.best_mapping.display()
         self.best_cycle_count = min_cycle_count
-        #self.best_latency = min_cycle_count / pcb_module.compute_module.clock_freq
         self.best_latency = min_cycle_count
         self.latency = self.best_latency
-        # self.best_mapping.display()
         return self.latency
 
     def simulate(
@@ -310,21 +288,10 @@ class Matmul(Operator):
                 inplace=True,
                 subset=["M", "N", "K", "ArrayHeight", "ArrayWidth", "Dataflow"],
             )
-            # self.look_up_table.reset_index(drop=True, inplace=True)
-            # self.look_up_table.to_csv(
-            #     f"./systolic_array_model/look_up_table_{pcb_module.compute_module.core.systolic_array.array_height}_{pcb_module.compute_module.core.systolic_array.array_width}.csv",
-            #     header=False,
-            #     index=False,
-            # )
             self.look_up_table.set_index(
                 ["M", "N", "K", "ArrayHeight", "ArrayWidth", "Dataflow"],
                 inplace=True,
             )
-        # print(self.look_up_table)
-        # print(self.look_up_table.loc[(32, 16, 256, 16, 16, 'os'), "cycle_count"
-        #                              ].item())
-        # print('sdfsdfsdfsd')
-        # exit()
         M = computational_graph.M
         N = computational_graph.N
         K = computational_graph.K
@@ -356,8 +323,6 @@ class Matmul(Operator):
             [ceil(M / l2_tile_M), ceil(N / l2_tile_N), ceil(K / l2_tile_K)],
             dtype=self.L2TileSimulator,
         )
-#        print('-'*20)
-#        print(l2_tiles.shape)
         if M_l2_t * N_l2_t * K_l2_t != 0:
             l2_tiles[:M_l2_t, :N_l2_t, :K_l2_t] = self.L2TileSimulator(
                 l2_tile_M,
@@ -459,8 +424,6 @@ class Matmul(Operator):
         total_cycle_count += (
             l2_tiles[0, 0, 0].M_K_io_cycle_count + l2_tiles[0, 0, 0].K_N_io_cycle_count
         )
-        #print('total_cycle_count')
-        #print(total_cycle_count)
 
         previous_m = 0
         previous_n = 0
@@ -529,9 +492,7 @@ class Matmul(Operator):
         if previous_k > 0:
             total_cycle_count += ceil(l2_tiles[-1, -1, -1].K_reduction_cycle_count)
 
-        return total_cycle_count #+ ceil(
-        # pcb_module.io_module.latency * 2 * pcb_module.compute_module.clock_freq
-        # )
+        return total_cycle_count 
 
     class L2TileSimulator:
         def __init__(
@@ -546,7 +507,6 @@ class Matmul(Operator):
             ops_name : str,
             next_ops_name : str,
         ):
-            # print(f'L2 tile: {M} {N} {K}')
             self.M = M
             self.N = N
             self.K = K
@@ -578,13 +538,6 @@ class Matmul(Operator):
                 )
 
 
-            #print("class Matmul > def compile_and_simulate > def simulate > class L2TileSimulator > def __init__")
-            #print("result of simulate_l2_tile_io_cycle_count: ")
-            #print(self.M_K_io_cycle_count)
-            #print(self.K_N_io_cycle_count)
-            #print(self.M_N_io_cycle_count)
-            #print("result of simulate_l2_tile_compute_cycle_count: ")
-            #print(self.compute_cycle_count)
 
         def simulate_l2_tile_io_cycle_count(
             self, M: int, N: int, data_type: DataType, chiplet_module: Device
@@ -764,10 +717,6 @@ class Matmul(Operator):
                 ceil(K / l1_tile_K),
                 mapping.l1_loop_order,
             )):
-#                if count % log_interval == 0 or count == total_iterations - 1:
-#                    print(f"Progress: {count + 1}/{total_iterations} iterations completed")
-                #print(m, n, k)
-                #print(ceil(M / l1_tile_M), ceil(N/ l1_tile_N), ceil(K / l1_tile_K))
                 active_l1_tile_list.append((m, n, k, l1_tiles[m, n, k]))
                 if (
                     m == ceil(M / l1_tile_M) - 1
@@ -797,7 +746,6 @@ class Matmul(Operator):
                 )
 
                 current_batch_compute_cycle_count = 0
-                #print('active_l1_tile_list :', active_l1_tile_list)
 
                 for i in range(len(active_l1_tile_list)):
                     temp_m, temp_n, temp_k, temp_l1_tile = active_l1_tile_list[i]
@@ -827,7 +775,6 @@ class Matmul(Operator):
                     (current_batch_Read_K_N * (~previous_batch_Read_K_N))
                     * K_N_tile_size
                 )
-#                print("DEBUG NK", current_batch_K_N_read_count,current_batch_Read_K_N , (~previous_batch_Read_K_N),K_N_tile_size)
                 current_batch_M_N_read_count = np.sum(
                     (
                         current_batch_Read_M_N
@@ -908,7 +855,6 @@ class Matmul(Operator):
                 / chiplet_module.compute_module.l2_bandwidth_per_cycle
             )
 
-            #skkim test
             if 'w2_projection' in ops_name:
                 file_path = f"./Tiles/whole_tile_list_{process_id}.json"
                 with open(file_path, 'r') as f:
@@ -1081,7 +1027,6 @@ class Matmul(Operator):
             active_l1_tile_list = []
 
             sram_status, sram_table = sram.load_sram_status(chiplet_module)
-#            print("MATMUL", sram_table)
          
 
             time_tick = 0
@@ -1091,8 +1036,6 @@ class Matmul(Operator):
                 ceil(K / l1_tile_K),
                 mapping.l1_loop_order,
             ):
-                #print(m, n, k)
-                #print(ceil(M / l1_tile_M), ceil(N/ l1_tile_N), ceil(K / l1_tile_K))
                 active_l1_tile_list.append((m, n, k, l1_tiles[m, n, k]))
                 if (
                     m == ceil(M / l1_tile_M) - 1
@@ -1122,7 +1065,6 @@ class Matmul(Operator):
                 )
 
                 current_batch_compute_cycle_count = 0
-#                print('active_l1_tile_list :', active_l1_tile_list)
 
                 for i in range(len(active_l1_tile_list)):
                     temp_m, temp_n, temp_k, temp_l1_tile = active_l1_tile_list[i]
@@ -1163,9 +1105,6 @@ class Matmul(Operator):
                     (previous_batch_Write_M_N * (~current_batch_Read_M_N))
                     * M_N_tile_size
                 )
-#                print("CHECK MK ", current_batch_M_K_read_count)
-#                print("CHECK KN ", current_batch_K_N_read_count)
-#                print("CHECK MN ", current_batch_M_N_read_count)
 
                 # read current batch while compute and write previous batch
                 current_batch_read_count = (
@@ -1191,13 +1130,7 @@ class Matmul(Operator):
                 is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, m, n, k, ops_name)
                 write_or_free_ended = False
                 unhided_io_amount = 0
-#                print("skkim | ops : ", ops_name + "_" + str(m)  + "_" + str(n)  + "_" + str(k))
-                if (is_loaded == True):
-                    print ("SKKIM HIT", ops_name + "_" + str(m)  + "_" + str(n)  + "_" + str(k))
-                elif (is_loaded == False):
-                    print ("SKKIM MISS", ops_name + "_" + str(m)  + "_" + str(n)  + "_" + str(k))
                 while(is_loaded == False):
-                    #print("SKKIM sram status", sram_status)
                     loadable_amount = chiplet_module.compute_module.core.SRAM_size
                     remained_amount = loadable_amount
                     tot_find_overhead = 0
@@ -1213,7 +1146,6 @@ class Matmul(Operator):
                         else:
                             #if prvious_batch_write_cycle_count > 0:
                             if previous_batch_M_N_write_count > 0:
-                                #print("prv batch write cycle count")
                                 if current_batch_M_K_read_count > 0:
                                     remained_amount, sram_status, sram_table = sram.write_tile_from_sram(
                                         sram_status, sram_table, previous_m_n_k, chiplet_module, ops_name, 0, loadable_amount
@@ -1227,7 +1159,6 @@ class Matmul(Operator):
                                         sram_status, sram_table, previous_m_n_k, chiplet_module, ops_name, 2, loadable_amount
                                     )
                             else:
-                                #print("no prv batch write cycle count")
                                 if current_batch_M_K_read_count > 0:
                                     sram_status, sram_table = sram.free_tile_from_sram(
                                         sram_status, sram_table, previous_m_n_k, chiplet_module, ops_name, 0,
@@ -1241,9 +1172,7 @@ class Matmul(Operator):
                                         sram_status, sram_table, previous_m_n_k, chiplet_module, ops_name, 2,
                                     )
                         write_or_free_ended = True
-                    #unhided_io_amount += loadable_amount - remained_amount + tot_find_overhead
                     unhided_io_amount += loadable_amount - remained_amount
-#                    print("DEBUG", unhided_io_amount, loadable_amount , remained_amount)
                         
                     is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, m, n, k, ops_name)
 
@@ -1260,7 +1189,6 @@ class Matmul(Operator):
                     loadable_amount = remained_amount
                     end_write_sram_size = sram.get_sramutil(sram_status, chiplet_module) 
                 else:
-                    #if prvious_batch_write_cycle_count > 0:
                     if previous_batch_M_N_write_count > 0:
                         if current_batch_M_K_read_count > 0:
                             remained_amount, sram_status, sram_table = sram.write_tile_from_sram(
@@ -1298,52 +1226,30 @@ class Matmul(Operator):
                     hided_io_cycle_count = current_batch_compute_cycle_count * chiplet_module.compute_module.l2_bandwidth_per_cycle / chiplet_module.compute_module.core.systolic_array.input_word_size
 
                 tot_find_overhead = 0
-#                print(f"sram status: {sram_status}i")
-#                print(f"loadable amount {m}_{n}_{k}: {loadable_amount}")
                 print()
                 while(loadable_amount > 0):
                     previous_sram = sram_status.copy()
                     prev_loadable_amount = loadable_amount
-                    #print("SKKIM second while loop load tile")
                     tmp_sram_status = sram_status.copy()
                     loadable_amount, sram_status, sram_table, tmp_find_overhead = sram.load_tile_to_sram_cont( #cache
-                    #loadable_amount, sram_status, sram_table, tmp_find_overhead = sram.load_tile_to_sram(
                         sram_status, sram_table, chiplet_module, loadable_amount 
                     )
                     tot_find_overhead += tmp_find_overhead
-#                    for i in tmp_sram_status:
-#                        if i not in sram_status:
-#                            print("-----", i)
-#                    for i in sram_status:
-#                        if i not in tmp_sram_status:
-#                            print("skkim | +++++(preload)", i)
-#                    print("skkim | sram table", sram_table)
-#                    print("skkim | sram status", sram_status)
                     load_cnt += 1
                     if(previous_sram == sram_status and prev_loadable_amount > 0):
                         if prev_loadable_amount == float("inf"):
                             hided_io_cycle_count = hided_io_cycle_count
                         else:
                             hided_io_cycle_count = max(hided_io_cycle_count - (prev_loadable_amount * chiplet_module.compute_module.core.systolic_array.input_word_size / chiplet_module.compute_module.l2_bandwidth_per_cycle),0)
-#                print(f"END PRELOAD sram status: {sram_status}")
                 if load_cnt == 1 or load_cnt == 0:
                     skkim_io_byte = 0
                 else:
                     skkim_io_byte += abs(sram.get_sramutil(sram_status, chiplet_module) - end_write_sram_size)
 
                 unhided_io_cycle_count = ceil(unhided_io_amount * chiplet_module.compute_module.core.systolic_array.input_word_size / chiplet_module.compute_module.l2_bandwidth_per_cycle) 
-                #unhided_io_cycle_count = ceil(unhided_io_amount * chiplet_module.compute_module.core.systolic_array.input_word_size / chiplet_module.compute_module.l2_bandwidth_per_cycle) + tot_find_overhead
-#                print(f"kh,compute_cycle for {ops_name} M_N_K {m}_{n}_{k} : {current_batch_compute_cycle_count}")
-#                print(f"kh,io_cycle for {ops_name} M_N_K {m}_{n}_{k} : {hided_io_cycle_count + unhided_io_cycle_count}")
-#                print(f"kh,total_cycle for {ops_name} M_N_K {m}_{n}_{k} : {unhided_io_cycle_count + current_batch_compute_cycle_count}")
                 skkim_io_cycle = hided_io_cycle_count + unhided_io_cycle_count
-#<<<<<<< HEAD
-#                skkim_total_cycle_count = current_batch_compute_cycle_count + unhided_io_cycle_count
-#=======
                 skkim_compute_cycle = current_batch_compute_cycle_count
-                print("DEBUG", hided_io_cycle_count, current_batch_compute_cycle_count,unhided_io_cycle_count)
                 skkim_total_cycle_count = max(hided_io_cycle_count, current_batch_compute_cycle_count) + unhided_io_cycle_count
-#>>>>>>> origin/skkim_preload
                 time_tick += skkim_total_cycle_count
 
 
@@ -1363,13 +1269,10 @@ class Matmul(Operator):
                     )
                     + prvious_batch_write_cycle_count
                 )
-#                skkim_io_cycle = current_batch_read_cycle_count + prvious_batch_write_cycle_count 
                 print("total cycle(X) :", time_tick)
                 print("compute cycle(X1) :", current_batch_compute_cycle_count)
                 print("SA cycle(X1) :", current_batch_compute_cycle_count)
                 print("io cycle(X2) :", skkim_io_cycle)
-#                print("hided io cycle(X2) :", hided_io_cycle_count)
-#                print("unhided io cycle(X2) :", unhided_io_cycle_count)
                 print("current cycle(X3) :", skkim_total_cycle_count)
                 print("memory bw util[%](Y1) :", 100)
 
@@ -1381,20 +1284,8 @@ class Matmul(Operator):
                 previous_m_n_k = '_' + str(m) + '_' + str(n) + '_' + str(k)
 
                 active_l1_tile_list = []
-#                if skkim_io_cycle == 0:
-#                    print("memory bw util[%](Y1) :", 0)
-#                else:
-#                print(f"sram occupancy[%](Y2) : {sram.get_sramutil(sram_status, chiplet_module)/ chiplet_module.compute_module.core.SRAM_size * 100:.3f}")
-                print(f"sram status: {sram_status}")
-#                print(f"sram table: {sram_table}")
                 print("sa util[%](Y3) : ", util_rate * 100)
 
-            # last batch's compute and write
-#            total_cycle_count += previous_batch_compute_cycle_count + ceil(
-#                np.sum(previous_batch_Write_M_N * M_N_tile_size)
-#                * data_type.word_size
-#                / chiplet_module.compute_module.l2_bandwidth_per_cycle
-#            )
             sram.store_sram_status(sram_status, sram_table)
 
             return time_tick
@@ -1421,7 +1312,6 @@ class Matmul(Operator):
             self.sram_loads, self.memory_usage = self.simulate_l1_tile_sram_usage(
                 M, N, K, data_type, chiplet_module
             )
-#            print("Load:",self.sram_loads, "Occu:",self.memory_usage)
 
         def simulate_l1_tile_sram_usage(
             self,
@@ -1454,8 +1344,6 @@ class Matmul(Operator):
             M_tiling_factor = mapping.l0_M_tiling_factor
             N_tiling_factor = mapping.l0_N_tiling_factor
             K_tiling_factor = mapping.l0_K_tiling_factor
-#            print(">>>>>>",M_tiling_factor ,K_tiling_factor ,N_tiling_factor)
-#            print(">>>>>>",chiplet_module.compute_module.core.systolic_array_count)
             assert (
                 M_tiling_factor * K_tiling_factor * N_tiling_factor
                 <= chiplet_module.compute_module.core.systolic_array_count
@@ -1492,7 +1380,6 @@ class Matmul(Operator):
         dataflow="os",
     ):
         util_rate = -1
-        # print(f'start: {M} {N} {K} {array_height} {array_width} {mac_per_clock} {dataflow}')
         assert M * N * K * array_height * array_width * mac_per_clock != 0
         if M >= array_height and N >= array_width:
             uril_rate = 1
@@ -1529,7 +1416,6 @@ class Matmul(Operator):
                 return ceil(
                     M * N * K / array_height / array_width / mac_per_clock / util_rate
                 ), util_rate
-        # print('start look up table')
         try:
             cycle_count = look_up_table.loc[
                 (M, N, K, array_height, array_width, dataflow), "cycle_count"
@@ -1546,7 +1432,6 @@ class Matmul(Operator):
                     (N, M, K, array_height, array_width, dataflow), "util_rate"
                 ].item()
             except KeyError:
-                # print('not found in look up table')
                 config = f"./systolic_array_model/temp/systolic_array_{os.getpid()}.cfg"
                 with open(config, "w") as f:
                     f.writelines("[general]\n")
@@ -1596,18 +1481,5 @@ class Matmul(Operator):
                 ]
                 if len(look_up_table) % 10 == 0:
                     look_up_table.sort_index(inplace=True)
-        # if (
-        #     dataflow == "os"
-        # ):  # scalesim assumes collecting output is not on critical path in os
-        #     cycle_count += min(array_height, array_width, M, N)
-        # if True:
-        #     print(f"{M}x{N}x{K}x{array_height}x{array_width}x{dataflow}: {cycle_count}")
-        # new_table = look_up_table[~look_up_table.index.duplicated(keep='first')]
-        # if look_up_table.shape[0]-new_table.shape[0]>=1:
-        #     print(look_up_table)
-        #     print(look_up_table.duplicated(keep=False))
-        #     exit()
-        # print(f'end: {M} {N} {K} {array_height} {array_width} {mac_per_clock} {dataflow}')
-        # assert isinstance(cycle_count, float), f"cycle_count: {cycle_count}"
         return ceil(cycle_count / mac_per_clock), util_rate
 

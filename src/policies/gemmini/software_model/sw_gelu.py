@@ -142,6 +142,5 @@ class GeLU(Operator):
             end = time.time()
             latencies.append(end - start)
         avg_overhead = statistics.median(latencies)
-        # print('GPU kernel launch overhead: ', avg_overhead*1e3, 'ms')
         print(latencies)
         return avg_overhead

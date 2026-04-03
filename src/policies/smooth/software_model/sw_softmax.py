@@ -409,7 +409,6 @@ class Softmax(Operator):
                     print('compute cycle(X1) : ', current_compute_cycle)
                     print('VE cycle(X1) : ', current_compute_cycle)
                     loadable_amount = current_compute_cycle * pcb_module.compute_module.l2_bandwidth_per_cycle / pcb_module.compute_module.core.systolic_array.input_word_size + remained_amount_pre
-                    print("SKKIM loadable amount", loadable_amount)
                     if (m, n) == (0, 0):
                         remained_amount, sram_status, sram_table = sram.write_previous_ops_from_sram(
                             sram_status, sram_table, ops_name, loadable_amount, pcb_module
@@ -442,11 +441,8 @@ class Softmax(Operator):
                     print('memory bw util[%](Y1) : 100' )
                     print('va util[%](Y3) : 100' )
                     print('sa util[%](Y3) : 0' )
-#                    print("SKKIM BEFORE PRELOAD", sram_status)
 #                    sram.free_end_tile_from_sram(sram_status, sram_table, ops_name
 
-                    print("SKKIM FREE ENDED BLOCK", ops_name, m, n)
-#                    print("SKKIM FREE ENDED BLOCK", sram_status)
                     while(loadable_amount != 0):
                         loadable_amount, sram_status, sram_table, remained_amount_pre = sram.load_tile_to_sram(
                             sram_status, sram_table, pcb_module, loadable_amount
@@ -466,7 +462,6 @@ class Softmax(Operator):
 
                     print('sram occupancy[%] :', sram.get_sramutil(sram_status, pcb_module)/pcb_module.compute_module.core.SRAM_size * 100)
                     previous_m_n_k = '_' + str(m) + '_' + str(n) + '_0'
- #                   print("SKKIM AFTER PRELOAD", sram_status)
 
                     print('sram status :', sram_status)
             # N / l1_tile_N 값이 바뀔 경우, Reduction cycle count에 대해서 신경써야할 수 있음.

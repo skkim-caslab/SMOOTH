@@ -719,12 +719,10 @@ def write_previous_ops_from_sram(
         if ops_order[target_idx] not in tile[0]:  # 이전 연산이 아닌 경우 유지
             tmp_sram_status.append(tile)
         elif 'alloc' in tile[0]:  # Alloc 타일인 경우 사용량 계산
-            #print("DEBUG", tile)  # 블록 개수 기준 사용량 계산
             used_amount += len(tile[1])  # 블록 개수 기준 사용량 계산
             # SRAM 테이블에서 해당 블록 해제
 
     remained_amount = max(0, loadable_amount - (used_amount * block_size)) #skkim test
-#    print("DEBUG ", remained_amount, loadable_amount , used_amount , block_size)
     sram_status = tmp_sram_status
 
     sram_table = [0] * len(sram_table)  # 모든 블록을 free 상태로 초기화
@@ -817,7 +815,6 @@ def write_tile_from_sram(
 
     remained_amount = max(0, loadable_amount - (used_amount * block_size))  # 사용 후 남은 공간
     if remained_amount < 0:
-        #print("DEBUG", loadable_amount, used_amount, block_size, remained_amount)
         raise Exception('remained_amount is negative!')
 
     sram_status = sort_sram_status(tmp_sram_status)

@@ -196,7 +196,6 @@ def load_tile_to_sram_cont(
                 data.pop(0)  # 전체 할당 완료된 경우 제거
 
         else:
-            #if loadable_amount >= data[0][1]:
             if loadable_amount >= ceil(data[0][1] / block_size)*block_size:
                 if needed_blocks > total_blocks:
                     raise Exception("Load tile size exceed SRAM size.")
@@ -206,7 +205,6 @@ def load_tile_to_sram_cont(
                 tot_find_overhead += find_overhead 
                 if len(allocated_blocks) == 0:
                     print(f"2. Not enough space for {data[0][0]}")
-                    #return 0, sram_status, sram_table, tot_find_overhead
                     return 0, sram_status, sram_table, orig_loadable
 
 
@@ -215,7 +213,6 @@ def load_tile_to_sram_cont(
                 for block in allocated_blocks:
                     sram_table[block] = 1  # 블록 테이블 업데이트
                 sram_status = sort_sram_status(sram_status)
-                #loadable_amount -= data[0][1]
                 loadable_amount = max(loadable_amount - len(allocated_blocks) * block_size, 0)
                 data[0][1] -= len(allocated_blocks) * block_size
                 data[0][1] = max(data[0][1], 0)
@@ -226,7 +223,6 @@ def load_tile_to_sram_cont(
                 if len(data) == 0:
                     with open(file_path, 'w') as f:
                         json.dump(data, f, indent=2)
-                    #return 0, sram_status, sram_table, tot_find_overhead
                     return 0, sram_status, sram_table, orig_loadable
 
 
@@ -257,8 +253,6 @@ def load_tile_to_sram_cont(
                 allocated_blocks, find_overhead = addr_decider(sram_table, needed_blocks)
                 tot_find_overhead += find_overhead 
                 if len(allocated_blocks) == 0:
-#                    assert(False)
-                    #return 0, sram_status, sram_table, tot_find_overhead
                     return 0, sram_status, sram_table, orig_loadable
 
 
@@ -280,7 +274,6 @@ def load_tile_to_sram_cont(
                     if len(data) == 0:
                         with open(file_path, 'w') as f:
                             json.dump(data, f, indent=2)
-                        #return 0, sram_status, sram_table, tot_find_overhead
                         return 0, sram_status, sram_table, orig_loadable
 
 
@@ -345,11 +338,6 @@ def load_tile_to_sram(
     loadable_amount : int,
     repeat_idx: int = 1,
     ):
-    print("*"*20)
-    print("DEBUG loadable amount",loadable_amount)
-    print("DEBUG repeat_idx", repeat_idx)
-    print("DEBUG real loadable amount", loadable_amount * repeat_idx)
-    print("*"*20)
     block_size = pcb_module.compute_module.core.block_size
     orig_loadable = loadable_amount
     remained_loadable_amount =  loadable_amount * repeat_idx
@@ -455,8 +443,6 @@ def load_tile_to_sram(
                 allocated_blocks, find_overhead = addr_decider(sram_table, needed_blocks)
                 tot_find_overhead += find_overhead 
                 if len(allocated_blocks) == 0:
-#                    assert(False)
-                    #return 0, sram_status, sram_table, tot_find_overhead
                     return 0, sram_status, sram_table, orig_loadable
 
 
@@ -478,7 +464,6 @@ def load_tile_to_sram(
                     if len(data) == 0:
                         with open(file_path, 'w') as f:
                             json.dump(data, f, indent=2)
-                        #return 0, sram_status, sram_table, tot_find_overhead
                         return 0, sram_status, sram_table, orig_loadable
 
 
@@ -494,7 +479,6 @@ def load_tile_to_sram(
                             sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
                             data[0][1] -= len(allocated_blocks) * block_size
                             data[0][1] = max(data[0][1], 0)
-                            #sram_status.append([data[0][0], allocated_blocks, 1])
                             for block in allocated_blocks:
                                 sram_table[block] = 1
                             sram_status = sort_sram_status(sram_status)
@@ -503,11 +487,9 @@ def load_tile_to_sram(
                             if len(data) == 0:
                                 with open(file_path, 'w') as f:
                                     json.dump(data, f, indent=2)
-                                #return 0, sram_status, sram_table, tot_find_overhead
 
                                 return 0, sram_status, sram_table, orig_loadable
 
-                            #print("SRAM:", sram_status)
 
 
                 else:  # 일부만 할당 가능
@@ -565,20 +547,15 @@ def load_tile_to_sram(
                         sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
                         data[0][1] -= len(allocated_blocks) * block_size
                         data[0][1] = max(data[0][1], 0)
-                        #sram_status.append([data[0][0], allocated_blocks, 1])
                         for block in allocated_blocks:
                             sram_table[block] = 1
                         sram_status = sort_sram_status(sram_status)
                         if status_flag == 1: data.pop(0)
 
                 else:
-                    #print("load", data[0],loadable_amount)
-#                    if loadable_amount >= ceil(data[0][1] / block_size)*block_size: #loadable_amount가 다음 tile을 충분히 다 load할 수 있다면
                     if remained_loadable_amount >= ceil(data[0][1] / block_size)*block_size: #loadable_amount가 다음 tile을 충분히 다 load할 수 있다면
-#                    if loadable_amount >= ceil(data[0][1] / block_size)*block_size or is_last_repeat==False: #skkim test block end
                         allocated_blocks, find_overhead = addr_decider(sram_table, needed_blocks)
                         tot_find_overhead += find_overhead 
-#                        print("skkim", allocated_blocks, sram_status, sram_table, needed_blocks)
 
                         if len(allocated_blocks) == 0:
                             loadable_amount = 0
@@ -602,14 +579,9 @@ def load_tile_to_sram(
                             sram_status = sort_sram_status(sram_status)
                             loadable_amount = max(loadable_amount - len(allocated_blocks) * block_size,0)
                             data.pop(0)
-#                            print("load done.")
-#                            if 'w0_projection' in data[0][0]:
-#                                print(data[0],data[1],data[2],data[3])
-                                #assert(False)
                             if len(data) == 0:
                                 with open(file_path, 'w') as f:
                                     json.dump(data, f, indent=2)
-                                #return 0, sram_status, sram_table, tot_find_overhead
                                 return 0, sram_status, sram_table, orig_loadable
 
 
@@ -729,12 +701,9 @@ def write_previous_ops_from_sram(
         if ops_order[target_idx] not in tile[0]:  # 이전 연산이 아닌 경우 유지
             tmp_sram_status.append(tile)
         elif 'alloc' in tile[0]:  # Alloc 타일인 경우 사용량 계산
-            #print("DEBUG", tile)  # 블록 개수 기준 사용량 계산
             used_amount += len(tile[1])  # 블록 개수 기준 사용량 계산
-            # SRAM 테이블에서 해당 블록 해제
 
     remained_amount = max(0, loadable_amount - (used_amount * block_size)) #skkim test
-#    print("DEBUG ", remained_amount, loadable_amount , used_amount , block_size)
     sram_status = tmp_sram_status
 
     sram_table = [0] * len(sram_table)  # 모든 블록을 free 상태로 초기화
@@ -756,10 +725,6 @@ def write_tile_from_sram(
     ):
     previous_m_n_k = previous_m_n_k +"_"
     block_size = pcb_module.compute_module.core.block_size
-    #print("write tile from sram", previous_m_n_k)
-    #print("ops_name", ops_name) #a_mul_v
-    #print("dec param", dec_param) #1
-    #print("sram status", sram_status) 
     """
     특정 연산에 사용된 타일을 SRAM에서 제거하고, 사용된 메모리 양을 계산한다.
 

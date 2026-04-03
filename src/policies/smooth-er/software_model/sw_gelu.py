@@ -142,8 +142,6 @@ class GeLU(Operator):
             print("io cycle(X2) : ", io_cycle_count)
             print("current cycle(X3) : ", max(compute_cycle_count, io_cycle_count))
             print("memory bw util[%](Y1) : ", 100)
-            print("sram status: ", sram_status)
-#            print("sram occupancy[%](Y2) : ", sram.get_sramutil(sram_status) / pcb_module.compute_module.core.SRAM_size *100)
             print("sa util[%](Y3) : ", 0)
             print("va util[%](Y3) : ", 100)
 
