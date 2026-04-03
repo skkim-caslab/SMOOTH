@@ -2,7 +2,7 @@ import json
 import os
 import itertools
 
-# 설정 가능한 값들
+# Values ​​that can be set
 quants = ["w4a8", "w8a8"]
 flash_attentions = [True, False]
 sram_sizes = ["512KB", "8MB", "64MB"]
@@ -10,11 +10,11 @@ sram_sizes = ["512KB", "8MB", "64MB"]
 output_token_lengths = [2048]
 block_sizes = ["2048", "1", "1024"]
 
-# 출력 디렉토리
+# output directory
 output_dir = "generated_configs"
 os.makedirs(output_dir, exist_ok=True)
 
-# 이름 변환 규칙
+# Name conversion rules
 def get_filename(quant, fa, sram, out_len, blk_size):
     fa_str = "fa" if fa else "sa"
     out_len_str = {2048: "2K", 1024:"1K"}[out_len]
@@ -24,7 +24,7 @@ def get_filename(quant, fa, sram, out_len, blk_size):
     if blk_size == "1": blk_str = "b1"
     return f"{quant}_{fa_str}_{sram}_{out_len_str}_{blk_str}.json"
 
-# 조합 생성 및 파일 저장
+# Create combination and save file
 for quant, fa, sram, out_len, blk_size in itertools.product(
     quants, flash_attentions, sram_sizes, output_token_lengths, block_sizes
 ):

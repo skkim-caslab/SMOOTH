@@ -464,7 +464,7 @@ class Softmax(Operator):
                     previous_m_n_k = '_' + str(m) + '_' + str(n) + '_0'
 
                     print('sram status :', sram_status)
-            # N / l1_tile_N 값이 바뀔 경우, Reduction cycle count에 대해서 신경써야할 수 있음.
+            # If the N / l1_tile_N value changes, you may need to pay attention to the reduction cycle count.
 
             sram.store_sram_status(sram_status, sram_table)
 

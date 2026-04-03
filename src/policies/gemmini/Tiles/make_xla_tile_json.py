@@ -3,7 +3,7 @@ from math import floor, log2
 import json
 import os
 
-# 가능한 값 정의
+# Define possible values
 #m_values = [1, 8, 16]
 seq_len = 32*1024
 model_dim = 4096 #model dimension
@@ -50,38 +50,38 @@ k_values = {
 }
 
 
-# 연산 흐름 정의
+# Definition of operation flow
 ops_sequence = [
     "q_projection", "k_projection", "v_projection", "q_mul_k", "softmax", 
     "a_mul_v", "w0_projection", "w1_projection", "w2_projection"
 ]
 
-# Softmax 이후 연산 흐름 지정
+# Specify operation flow after Softmax
 custom_next_ops = {
     "q_mul_k": "a_mul_v",
-    "softmax": None  # softmax에는 next_ops_name이 없음
+    "softmax": None # softmax has no next_ops_name
 }
-# 총 생성될 파일 수 계산
+# Calculate the total number of files to be created
 total_configs = 1
 for op in ops_sequence:
     total_configs *= len(n_values[op]) * (1 if op == 'softmax' else len(k_values[op]))
 #total_configs *= len(n_values[op])
 
-print(f"총 {total_configs}개의 JSON 파일이 생성될 예정입니다.")
+print(f"A total of {total_configs} JSON files will be created.")
 
-# 사용자 확인 후 진행
-user_input = input("계속 진행할까요? (y/n): ").strip().lower()
+# Proceed after user confirmation
+user_input = input("Shall we continue? (y/n): ").strip().lower()
 if user_input != 'y':
-    print("파일 생성이 취소되었습니다.")
+    print("File creation has been cancelled.")
     exit()
 #os.system('rm -rf ./double_tile_size/config*')
-# 조합을 생성하여 각 파일로 저장
+# Create a combination and save it as each file
 config_index = 0
 for m in m_values:
     n_combinations = itertools.product(*[n_values[op] for op in ops_sequence]) 
     k_combinations = itertools.product(*[k_values[op] for op in ops_sequence])
     
-    # k_values가 None이 아닌 경우만 포함
+    # Only includes cases where k_values ​​is not None
     k_ops = [op for op in ops_sequence if k_values[op] is not None]
 #    k_combinations = itertools.product(*[k_values[op] for op in k_ops])
     #print("N",len(list(n_combinations)))
@@ -122,11 +122,11 @@ for m in m_values:
                 json_data[op]["next_ops_name"] = "end" if op == ops_sequence[-1] else ops_sequence[idx + 1]
             
         
-        # 개별 JSON 파일 생성
+        # Create individual JSON files
         if sram_valid:
             filename = f"./sram_xla_128_256_sram128_seq32K_m6.7B/config_{config_index}.json"
             os.makedirs(os.path.dirname(filename), exist_ok=True)  # Ensure directory exists
             with open(filename, "w") as f:
                 json.dump(json_data, f, indent=4)
-            print(f"JSON 파일이 생성되었습니다: {filename}")
+            print(f"JSON file was created: {filename}")
             config_index += 1

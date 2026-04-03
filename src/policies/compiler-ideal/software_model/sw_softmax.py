@@ -315,13 +315,10 @@ class Softmax(Operator):
             time_tick = 0
             compute_time_tick = 0
             io_time_tick = 0
-            #skkim_cnt = 0
             for m, n in Softmax.generate_tile_loops(
                 ceil(M / l1_tile_M),
                 ceil(N / l1_tile_N),
             ):
-                #print("SKKIM cnt", skkim_cnt)
-                #skkim_cnt += 1
                 is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, m, n, 0, ops_name)
                 write_or_free_ended = False
                 while(is_loaded == False): 
@@ -330,7 +327,6 @@ class Softmax(Operator):
                         remained_amount, sram_status = sram.load_tile_to_sram(
                             sram_status, pcb_module, loadable_amount
                         )
-                        #print('SKKIM is loaded false, write ended io cycle(X2) : ', ceil(loadable_amount * pcb_module.compute_module.core.systolic_array.input_word_size / pcb_module.compute_module.l2_bandwidth_per_cycle) ) # preload io cycle
                     else:
                         if (m, n) == (0, 0):
                             remained_amount, sram_status = sram.write_previous_ops_from_sram(
@@ -340,10 +336,6 @@ class Softmax(Operator):
                             remained_amount, sram_status = sram.write_tile_from_sram(
                                 sram_status, previous_m_n_k, pcb_module, ops_name, 2, loadable_amount
                             )
-                        #print('SKKIM is loaded false, write or free io cycle(X2) : ', ceil(loadable_amount * pcb_module.compute_module.core.systolic_array.input_word_size / pcb_module.compute_module.l2_bandwidth_per_cycle) ) # preload io cycle
-#                        print('sram_status :', sram_status)
-#                        print('sram occupancy[%] :', sram.get_sramutil(sram_status)/pcb_module.compute_module.core.SRAM_size * 100)
-#                        print('sram status :', sram_status)
                         write_or_free_ended = True
 
                     is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, m, n, 0, ops_name)
@@ -356,25 +348,16 @@ class Softmax(Operator):
                 print('compute cycle(X1) : ', l1_tile.compute_cycle_count)
                 print('VE cycle(X1) : ', l1_tile.compute_cycle_count)
                 loadable_amount = l1_tile.compute_cycle_count * pcb_module.compute_module.l2_bandwidth_per_cycle / pcb_module.compute_module.core.systolic_array.input_word_size
-#                print("CHECK softmax loadable amount: ", loadable_amount)
-#                print('loadable_amount :', loadable_amount)
                 if (m, n) == (0, 0):
                     remained_amount, sram_status = sram.write_previous_ops_from_sram(
                         sram_status, ops_name, loadable_amount
                     )
-                    #print('After write_previous_ops sram_status : ', sram_status)
-                    #print('sram status : ', sram_status)
-                    #print('sram occupancy[%] : ', sram.get_sramutil(sram_status)/pcb_module.compute_module.core.SRAM_size * 100)
                     loadable_amount = remained_amount
                 else:
                     remained_amount, sram_status = sram.write_tile_from_sram(
                         sram_status, previous_m_n_k, pcb_module, ops_name, 2, loadable_amount
                     )
-                    #print("After write sram status : ", sram_status)
-                    #print('sram status : ', sram_status)
-                    #print('sram occupancy[%] : ', sram.get_sramutil(sram_status)/pcb_module.compute_module.core.SRAM_size * 100)
 
-#                print('remained_amount :', remained_amount)
                 loadable_amount = remained_amount
                 if loadable_amount == float("inf"):
                     print_io_cycle = current_time
@@ -388,27 +371,18 @@ class Softmax(Operator):
                 print('sa util[%](Y3) : 0' )
                 print('accum compute cycle : ', compute_time_tick)
                 print('accum io cycle : ', io_time_tick)
-#                print('loadable_amount=======================')
                 while(loadable_amount != 0):
-#                    print('loadable_amount during softmax compute : ', loadable_amount)
                     loadable_amount, sram_status = sram.load_tile_to_sram(
                         sram_status, pcb_module, loadable_amount
                     )
-                    #print('sram_status :', sram_status)
-#                    print('sram occupancy[%] :', sram.get_sramutil(sram_status)/pcb_module.compute_module.core.SRAM_size * 100)
-#                    print(' ')
 
                 print('sram occupancy[%] :', sram.get_sramutil(sram_status)/pcb_module.compute_module.core.SRAM_size * 100)
-                print('sram status :', sram_status)
                 previous_m_n_k = '_' + str(m) + '_' + str(n) + '_0'
                     
 
-            # N / l1_tile_N 값이 바뀔 경우, Reduction cycle count에 대해서 신경써야할 수 있음.
 
             sram.store_sram_status(sram_status)
 
-#            print('total cycle(X) : ', total_cycle_count," vs. ",skkim_total_cycle_count)
-            #return total_cycle_count
             return time_tick
 
 
@@ -469,20 +443,6 @@ class Softmax(Operator):
         ):
             # online softmax
             total_flop_count = M * N * (self.flops_per_exp * 3 + 7)
-            print("++++++++++++++++++++++++",total_flop_count , M , N , self.flops_per_exp )
-
-            # skkim: want to operate softamx parallel. then need to consider vector width and vector count
-#            M_per_vector_count = ceil(
-#                M / pcb_module.compute_module.core.vector_unit.vector_count
-#            )
-#            N_per_vector_count = N
-#            M_per_vector_lane = M_per_vector_count
-#            N_per_vector_lane = ceil(
-#                N_per_vector_count
-#                / pcb_module.compute_module.core.vector_unit.vector_width
-#            )
-
-#            total_flop_count = M_per_vector_lane * N_per_vector_lane * (self.flops_per_exp * 3 + 7)
 
             return ceil(
                 total_flop_count

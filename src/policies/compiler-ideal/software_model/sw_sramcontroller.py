@@ -22,7 +22,6 @@ def load_sram_status():
                 sram_status = []
     else:
         sram_status = []
-    #print(sram_status)
     return sram_status
 def load_tile_to_sram(
     sram_status: list,
@@ -34,32 +33,24 @@ def load_tile_to_sram(
     os.makedirs(process_dir, exist_ok=True)
 
     file_path = os.path.join(process_dir, f"remained_tile_list_{process_id}.json")
-#    file_path = "./Tiles/remained_tile_list.json"
     try:
         with open(file_path, 'r') as f:
-            fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+            fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
             data = json.load(f)
-            fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+            fcntl.flock(f, fcntl.LOCK_UN) # unlock
     except (json.JSONDecodeError, FileNotFoundError):
         data = []
-    #with open(file_path, 'r') as f:
-    #    try:
-    #        data = json.load(f)
-    #    except json.JSONDecodeError:
-    #        data = []
-    #        print("Json Error")
-
     num_of_tile = len(sram_status)
 
     if len(data) == 0:
         with open(file_path, 'w') as f:
-            fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+            fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
             json.dump(data, f, indent=2)
-            fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+            fcntl.flock(f, fcntl.LOCK_UN) # unlock
         return 0, sram_status
 
 
-    if num_of_tile == 0: #SRAM에 어떤 타일도 없는 경우
+    if num_of_tile == 0: #If there are no tiles in SRAM
         start_addr = 0
         if 'alloc' in data[0][0]:
             if data[0][1] > pcb_module.compute_module.core.SRAM_size:
@@ -68,7 +59,6 @@ def load_tile_to_sram(
             else:
                 end_addr = data[0][1] - 1
                 sram_status.append([data[0][0], start_addr, end_addr, 1])
-                #print("SKKIM 1.", start_addr, end_addr)
                 sram_status = sort_sram_status(sram_status)
                 data.pop(0)
 
@@ -80,15 +70,14 @@ def load_tile_to_sram(
                 else:
                     end_addr = data[0][1] - 1
                     sram_status.append([data[0][0], start_addr, end_addr, 1])
-                    #print("SKKIM 2.", start_addr, end_addr)
                     sram_status = sort_sram_status(sram_status)
                     loadable_amount = loadable_amount - data[0][1]
                     data.pop(0)
                     if len(data) == 0:
                         with open(file_path, 'w') as f:
-                            fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+                            fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
                             json.dump(data, f, indent=2)
-                            fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+                            fcntl.flock(f, fcntl.LOCK_UN) # unlock
                         return 0, sram_status
 
                     if 'alloc' in data[0][0]:
@@ -100,21 +89,20 @@ def load_tile_to_sram(
 
                         else:
                             sram_status.append([data[0][0], start_addr, end_addr , 1])
-                            #print("SKKIM 3.", start_addr, end_addr)
                             sram_status = sort_sram_status(sram_status)
                             data.pop(0)
 
 
         with open(file_path, 'w') as f:
-            fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+            fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
             json.dump(data, f, indent=2)
-            fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+            fcntl.flock(f, fcntl.LOCK_UN) # unlock
 
 
     else:
         start_addr = sram_status[num_of_tile-1][2] + 1
         for i in range(len(sram_status)):
-            if sram_status[i][3] == 0: #SRAM에 transfer 중 끊긴 타일이 있다.(이 타일은 alloc tile은 아니다.)
+            if sram_status[i][3] == 0: #There is a tile that was disconnected during transfer in SRAM. (This tile is not an alloc tile.)
                 if loadable_amount >= data[0][1]:
                     sram_status[i][3] = 1
                     sram_status[i][2] = sram_status[i][2] + data[0][1]
@@ -122,9 +110,9 @@ def load_tile_to_sram(
                     data.pop(0)
                     if len(data) == 0:
                         with open(file_path, 'w') as f:
-                            fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+                            fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
                             json.dump(data, f, indent=2)
-                            fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+                            fcntl.flock(f, fcntl.LOCK_UN) # unlock
                         return 0, sram_status
 
                     if 'alloc' in data[0][0]:
@@ -136,32 +124,29 @@ def load_tile_to_sram(
 
                         else:
                             sram_status.append([data[0][0], start_addr, end_addr, 1])
-                            #print("SKKIM 4.", start_addr, end_addr)
                             sram_status = sort_sram_status(sram_status)
                             data.pop(0)
                             if len(data) == 0:
                                 with open(file_path, 'w') as f:
-                                    fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+                                    fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
                                     json.dump(data, f, indent=2)
-                                    fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+                                    fcntl.flock(f, fcntl.LOCK_UN) # unlock
                                 return 0, sram_status
                 else:
                     org_loaded = sram_status[i][2]
                     sram_status[i][2] = sram_status[i][2] + loadable_amount
-                    #print("SKKIM 5.", org_loaded+1, sram_status[i][2])
                     data[0][1] = data[0][1] - loadable_amount
                     loadable_amount = 0
 
                 with open(file_path, 'w') as f:
-                    fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+                    fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
                     json.dump(data, f, indent=2)
-                    fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+                    fcntl.flock(f, fcntl.LOCK_UN) # unlock
 
                 break
 
-            if i == len(sram_status)-1: #SRAM에 transfer가 중단된 타일이 없는 경우
-                if 'alloc' in data[0][0]: #만약 다음 load해야할 타일이 alloc 타일인 경우
-                    #print("SKKIM for loop 0")
+            if i == len(sram_status)-1: #If there are no tiles in SRAM where transfer has been interrupted
+                if 'alloc' in data[0][0]: #If the next tile to load is an alloc tile
                     start_addr, end_addr = addr_decider(sram_status, start_addr, data[0][1], data[0][1], pcb_module)
 
                     if (start_addr, end_addr) == (-1, -1):
@@ -171,51 +156,45 @@ def load_tile_to_sram(
                             if 'alloc' in sram_status[i][0]: 
                                 break
                             if i == len(sram_status) - 1:
-                                #print("Free All loaded Tile")
-                                #print("SRAM Status", sram_status)
                                 process_dir = f"./Tiles/"
                                 os.makedirs(process_dir, exist_ok=True)
 
                                 file_path = os.path.join(process_dir, f"remained_tile_list_{process_id}.json")
-                                #file_path = "./Tiles/remained_tile_list.json"
                                 with open(file_path, 'r') as f:
-                                    fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+                                    fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
                                     data = json.load(f)
-                                    fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+                                    fcntl.flock(f, fcntl.LOCK_UN) # unlock
                                 for item in sram_status:
                                     data.insert(0, [item[0], item[2] - item[1]])
                                 with open(file_path, 'w') as f:
-                                    fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+                                    fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
                                     json.dump(data, f, indent = 2)
-                                    fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+                                    fcntl.flock(f, fcntl.LOCK_UN) # unlock
                                 sram_status = []
 
                     else:
                         sram_status.append([data[0][0], start_addr, end_addr, 1])
-                        #print("SKKIM 6.", start_addr, end_addr)
                         sram_status = sort_sram_status(sram_status)
                         data.pop(0)
 
 
                 else:
-                    #print("SKKIM for loop 1")
-                    if loadable_amount >= data[0][1]: #loadable_amount가 다음 tile을 충분히 다 load할 수 있다면
+                    if loadable_amount >= data[0][1]: #if loadable_amount is enough to load the next tile
                         start_addr, end_addr = addr_decider(sram_status, start_addr, data[0][1], data[0][1], pcb_module)
 
                         if (start_addr, end_addr) == (-1, -1):
                             loadable_amount = 0
 
-                        else: #SRAM에 해당 타일을 다 넣을 수 있는 자리가 있다면,
+                        else: #if there is space in SRAM to load the tiles,
                             sram_status.append([data[0][0], start_addr, end_addr, 1])
-                            #print("SKKIM 7.", start_addr, end_addr)
                             sram_status = sort_sram_status(sram_status)
                             loadable_amount = loadable_amount - data[0][1]
                             data.pop(0)
                             if len(data) == 0:
                                 with open(file_path, 'w') as f:
-                                    fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+                                    fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
                                     json.dump(data, f, indent=2)
-                                    fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+                                    fcntl.flock(f, fcntl.LOCK_UN) # unlock
                                 return 0, sram_status
 
                             if 'alloc' in data[0][0]:
@@ -227,125 +206,19 @@ def load_tile_to_sram(
 
                                 else:
                                     sram_status.append([data[0][0], start_addr, end_addr , 1])
-                                    #print("SKKIM 8.", start_addr, end_addr)
                                     sram_status = sort_sram_status(sram_status)
                                     data.pop(0)
-                    else: #loadable_amount가 다음 타일을 충분히 다 load할 수 없다면
+                    else: #loadable_amount is not enough to load the next tile
                         loadable_amount = 0
-                        #start_addr, end_addr = addr_decider(sram_status, start_addr, loadable_amount, data[0][1], pcb_module)
-                        #loadable_amount = 0
-                        #if (start_addr, end_addr) == (-1, -1):
-                        #    loadable_amount = 0
-
-                        #else:
-                        #    sram_status.append([data[0][0], start_addr, end_addr, 0])
-                            #print("SKKIM 9.", start_addr, end_addr)
-                        #    sram_status = sort_sram_status(sram_status)
-                        #    data[0][1] = data[0][1] - loadable_amount
-                        #    loadable_amount = 0
-
 
                 with open(file_path, 'w') as f:
-                    fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
+                    fcntl.flock(f, fcntl.LOCK_SH) # File read lock (Shared Lock)
                     json.dump(data, f, indent=2)
-                    fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
+                    fcntl.flock(f, fcntl.LOCK_UN) # unlock
 
 
     return loadable_amount, sram_status
 
-'''
-def load_tile_to_sram( #skkim: load multiple tile
-    sram_status: list,
-    pcb_module: Device,
-    loadable_amount: int,
-):
-    process_dir = f"./Tiles/"
-    os.makedirs(process_dir, exist_ok=True)
-
-    file_path = os.path.join(process_dir, f"remained_tile_list_{process_id}.json")
-    try:
-        with open(file_path, 'r') as f:
-            fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
-            data = json.load(f)
-            fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
-    except (json.JSONDecodeError, FileNotFoundError):
-        data = []
-
-    num_of_tile = len(sram_status)
-
-    if len(data) == 0:
-        with open(file_path, 'w') as f:
-            fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
-            json.dump(data, f, indent=2)
-            fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
-        return 0, sram_status
-
-    # Group tiles by base operation and M,N,K
-    def group_tiles_by_operation(tiles):
-        grouped = {}
-        for tile in tiles:
-            tile_name = tile[0]
-            parts = tile_name.split('_')
-            if len(parts) > 3:
-                # Extract base operation name (before 'load' or 'alloc')
-                if 'load' in tile_name or 'alloc' in tile_name:
-                    for i, part in enumerate(parts):
-                        if part in ['load', 'alloc']:
-                            op_name = '_'.join(parts[:i])
-                            break
-                    m, n, k = parts[-4:-1]
-                    key = f"{op_name}_{m}_{n}_{k}"
-                else:
-                    key = tile_name
-            else:
-                key = tile_name
-            if key not in grouped:
-                grouped[key] = []
-            grouped[key].append(tile)
-        return grouped
-
-    grouped_tiles = group_tiles_by_operation(data)
-    if not grouped_tiles:
-        return 0, sram_status
-
-    # Process the first group of tiles
-    first_key = next(iter(grouped_tiles))
-    tiles_to_load = grouped_tiles[first_key]
-    total_size = sum(tile[1] for tile in tiles_to_load)
-
-    # Check if all tiles in the group can be loaded
-    if total_size > loadable_amount or total_size > pcb_module.compute_module.core.SRAM_size:
-        return 0, sram_status
-
-    # Attempt to allocate all tiles in the group using addr_decider
-    temp_sram_status = sram_status.copy()
-    remaining_loadable = loadable_amount
-    tiles_loaded = []
-
-    start_addr = temp_sram_status[-1][2] + 1 if temp_sram_status else 0
-    for tile in tiles_to_load:
-        if tile[1] > pcb_module.compute_module.core.SRAM_size:
-            raise Exception("Tile size exceeds SRAM size")
-        start_addr, end_addr = addr_decider(temp_sram_status, start_addr, tile[1], tile[1], pcb_module)
-        if (start_addr, end_addr) == (-1, -1):
-            return 0, sram_status
-        temp_sram_status.append([tile[0], start_addr, end_addr, 1])
-        temp_sram_status = sort_sram_status(temp_sram_status)
-        remaining_loadable -= tile[1]
-        tiles_loaded.append(tile)
-        start_addr = end_addr + 1
-
-    # If all tiles are allocated, update sram_status and data
-    sram_status = temp_sram_status
-    data = [tile for tile in data if tile not in tiles_loaded]
-
-    with open(file_path, 'w') as f:
-        fcntl.flock(f, fcntl.LOCK_SH)  # 파일 읽기 잠금 (Shared Lock)
-        json.dump(data, f, indent=2)
-        fcntl.flock(f, fcntl.LOCK_UN)  # 잠금 해제
-
-    return remaining_loadable, sram_status
-'''
 def get_sramutil(sram_list:list):
     sram_usage = 0
     for tile in sram_list:
@@ -413,11 +286,6 @@ def write_tile_from_sram(
     loadable_amount: int,
     ):
 
-    #print("before write ", sram_status) # exist
-    #print("write tile from sram")
-    #print("ops_name", ops_name) #q projection
-    #print("dec_param", dec_param) # 1
-    #print("previous", previous_m_n_k) # _0_2_0
 
     previous_m_n_k = previous_m_n_k+"_"
 
@@ -426,7 +294,6 @@ def write_tile_from_sram(
             ops_name = 'q_mul_k' + ops_name[7:]
     used_amount = 0
     tmp_sram_status = []
-#    print("SKKIM sram status", ops_name, previous_m_n_k, dec_param,  sram_status)
     for i in range(len(sram_status)):
         if ops_name not in sram_status[i][0]:
             tmp_sram_status.append(sram_status[i])
@@ -464,7 +331,6 @@ def write_tile_from_sram(
     for i in tmp_sram_status:
         previous_mnk = previous_m_n_k.split("_")
         tile_mnk = i[0].split("_")
-        #if 'load' in i[0] and ops_name in i[0] and  len(tile_mnk) > 3:
         if ops_name in i[0] and  len(tile_mnk) > 3:
             _, prv_m, prv_n, prv_k,_ = previous_mnk
             tile_m, tile_n, tile_k = tile_mnk[-4:-1]
@@ -502,14 +368,9 @@ def free_tile_from_sram(
     ops_name: str,
     dec_param = -1
     ):
-#    print("free tile from sram", previous_m_n_k) #_0_0_0_
-#    print("ops_name", ops_name) #a_mul_v
-#    print("dec param", dec_param) #1
-#    print("sram status", sram_status) 
     previous_m_n_k = previous_m_n_k+"_"
     tmp_sram_status = []
     for i in range(len(sram_status)):
-        #print("check", sram_status[i][0])
         if ops_name not in sram_status[i][0]: #false
             tmp_sram_status.append(sram_status[i])
         else: #true
@@ -564,7 +425,6 @@ def free_tile_from_sram(
 
     sram_status = tmp_sram_status
     sram_status = sort_sram_status(sram_status)
-#    print("after free ", sram_status)
     
     return sram_status
 
@@ -593,7 +453,6 @@ def check_needed_tile_loaded(
     K: int,
     ops_name: str,
     ):
-    #file_path = "./Tiles/whole_tile_list.json"
     process_dir = f"./Tiles"
     os.makedirs(process_dir, exist_ok=True)
 
@@ -613,7 +472,6 @@ def check_needed_tile_loaded(
         else:
             if ops_name in tile[0] and '_' + str(M) + '_' + str(N) + '_' + str(K) + '_' in tile[0]:
                 needed_tile.append(tile)
-#    print('needed_tile in def', needed_tile)
 
     tmp_needed_tile = needed_tile
     needed_tile = []
@@ -622,9 +480,7 @@ def check_needed_tile_loaded(
             needed_tile.append(tile)
 
         else:
-#            print('############start sram status check###############')
             for i in range(len(sram_status)):
-#                print(tile , sram_status[i][0] ,sram_status[i][3] == 1)
                 if tile[0] == sram_status[i][0] and sram_status[i][3] == 1:
                     break
                 if i == len(sram_status)-1:
@@ -634,7 +490,6 @@ def check_needed_tile_loaded(
         is_loaded = True
 
 
-#    print("final need tile:", needed_tile)
     return  is_loaded, needed_tile
 def addr_decider(
     sram_status: list,
@@ -695,7 +550,6 @@ def addr_decider(
         attempts = 0
         while attempts < 2:  # Try twice: first with current_addr, then with largest block
             aligned_start = align_address(current_reg)
-            print("SKKIM DEBUG", aligned_start,tile_size, current_reg)
             if aligned_start + tile_size - 1 <= max_addr:
                 # Check if the block is free
                 is_free = True
@@ -734,55 +588,6 @@ def addr_decider(
 
 
 
-'''
-def addr_decider(
-    sram_status: list,
-    start_addr: int,
-    loadable_amount: int,
-    tile_size: int,
-    pcb_module: Device,
-    ):
-    end_addr = 0
-    if start_addr + tile_size - 1 > pcb_module.compute_module.core.SRAM_size:
-        window_start = 0
-        for i in range(len(sram_status)):
-            if sram_status[i][1] - window_start + 1 > tile_size:
-                start_addr = window_start
-                end_addr = start_addr + loadable_amount -1
-                #print("SKKIM, tile overflow - find, ", start_addr, end_addr)
-                break
-            if i == len(sram_status) - 1:
-                start_addr = -1
-                end_addr = -1
-            window_start = sram_status[i][2] + 1
-    else:
-        for sram_item in sram_status:
-            if start_addr <= sram_item[1] and sram_item[1] <= start_addr + tile_size - 1:
-                break
-            if start_addr <= sram_item[2] and sram_item[2] <= start_addr + tile_size - 1:
-                break
-
-            if sram_item == sram_status[-1]:
-                end_addr = start_addr + loadable_amount - 1
-                return start_addr, end_addr
-            
-        window_start = 0
-        for i in range(len(sram_status)):
-            if sram_status[i][1] - window_start + 1 > tile_size:
-                start_addr = window_start
-                end_addr = start_addr + loadable_amount -1
-                break
-            if i == len(sram_status) - 1:
-                start_addr = -1
-                end_addr = -1
-            window_start = sram_status[i][2] + 1
-
-#    if start_addr == -1 and end_addr == -1:
-#        print("SKKIM, tile overflow - find X")
-#        print("SKKIM, ", sram_status)
-    return start_addr, end_addr
-'''
-
 def flash_attention_write(
     sram_status: list,
     prev_ops_name : str,
@@ -812,7 +617,6 @@ def flashattention_check_needed_tile(
     sram_status: list,
     ops_name: str,
     ):
-    #file_path = "./Tiles/whole_tile_list.json"
     process_dir = f"./Tiles"
     os.makedirs(process_dir, exist_ok=True)
 

@@ -16,18 +16,18 @@ def free_ended_block_from_sram(
     dec_param = -1
 ):
     """
-    특정 조건을 만족하는 연산에 대해 하나의 블록만 SRAM에서 제거한다.
+    For operations that satisfy certain conditions, only one block is removed from SRAM.
 
     Parameters:
-        sram_status (list): 현재 SRAM 상태 (각 항목은 [타일 이름, 할당된 블록 리스트, 상태] 형태)
-        sram_table (list): 현재 SRAM 블록 상태 (0 = free, 1 = allocated)
-        previous_m_n_k (str): 이전 M, N, K 값
-        pcb_module (Device): 하드웨어 모델
-        ops_name (str): 현재 연산 이름
-        dec_param (int): 결정 파라미터 (0, 1, 2)
+        sram_status (list): Current SRAM status (each item is in the form of [tile name, allocated block list, status])
+        sram_table (list): Current SRAM block status (0 = free, 1 = allocated)
+        previous_m_n_k (str): Previous M, N, K values
+        pcb_module (Device): Hardware model
+        ops_name (str): Current operation name
+        dec_param (int): decision parameter (0, 1, 2)
 
     Returns:
-        tuple: (list, list) -> (업데이트된 SRAM 상태, 업데이트된 SRAM 테이블)
+        tuple: (list, list) -> (updated SRAM state, updated SRAM table)
     """
     previous_m_n_k += "_"
     updated = False
@@ -40,16 +40,16 @@ def free_ended_block_from_sram(
                (dec_param == 0 and 'load_M_K' not in tile_name):
                 continue
 
-            # 해당 조건을 만족하는 첫 블록 하나만 해제
-            if tile[1]:  # block list가 비어있지 않은 경우
-                block_to_free = tile[1].pop(0)  # 가장 앞의 block 하나만 제거
-                sram_table[block_to_free] = 0  # 해당 block을 free 상태로 변경
+            # Release only the first block that satisfies the condition
+            if tile[1]: # If block list is not empty
+                block_to_free = tile[1].pop(0) # Remove only the first block
+                sram_table[block_to_free] = 0 # Change the block to free state
                 updated = True
 
-                # block 리스트가 모두 비면, 해당 tile도 제거
+                # When the block list is empty, the corresponding tile is also removed
                 if not tile[1]:
                     sram_status.remove(tile)
-                break  # 하나의 블록만 해제하고 종료
+                break # Release only one block and exit
 
     if updated:
         sram_status = sort_sram_status(sram_status)
@@ -57,7 +57,7 @@ def free_ended_block_from_sram(
     return sram_status, sram_table
 
 def update_longest_zero(sram_table: list):
-    """가장 긴 연속 0 구간을 찾아 전역 변수에 저장."""
+    """Find the longest consecutive zero interval and store it in a global variable."""
     global longest_zero_start, longest_zero_length
     max_zero_length = 0
     max_zero_start = 0
@@ -75,17 +75,17 @@ def update_longest_zero(sram_table: list):
         else:
             current_zero_length = 0
 
-    # 마지막 연속 0 구간 확인
+    # Check the last consecutive 0 section
     if current_zero_length > max_zero_length:
         max_zero_length = current_zero_length
         max_zero_start = current_zero_start
 
     longest_zero_start = max_zero_start
     longest_zero_length = max_zero_length
-    return 104  # find_zero 오버헤드
+    return 104 # find_zero overhead
 
 def addr_decider(sram_table: list, needed_blocks: int):
-    """캐싱된 가장 긴 연속 0 구간을 사용하거나, 필요 시 새로 탐색."""
+    """Use the longest cached consecutive zeros, or search anew if necessary."""
     global longest_zero_start, longest_zero_length
     allocated_blocks = []
     find_zero_overhead = 0
@@ -98,15 +98,15 @@ def addr_decider(sram_table: list, needed_blocks: int):
         #return allocated_blocks
         return allocated_blocks, find_zero_overhead
 
-    # 캐싱된 구간 확인
+    # Check cached section
     if longest_zero_start is not None and longest_zero_length >= needed_blocks:
-        # 캐싱된 구간에서 필요한 블록 할당
+        # Allocate necessary blocks in cached section
         allocated_blocks = list(range(longest_zero_start, longest_zero_start + needed_blocks))
-        # 캐시 업데이트
+        # update cache
         longest_zero_start += needed_blocks
         longest_zero_length -= needed_blocks
     else:
-        # 캐싱된 구간이 없거나 충분하지 않으면 새로 탐색
+        # If there is no cached section or it is not sufficient, search again
         find_zero_overhead = update_longest_zero(sram_table)
         if longest_zero_length >= needed_blocks:
             allocated_blocks = list(range(longest_zero_start, longest_zero_start + needed_blocks))
@@ -168,7 +168,7 @@ def load_tile_to_sram_cont(
             json.dump(data, f, indent=2)
         return 0, sram_status, sram_table, orig_loadable
 
-    if num_of_tile == 0: #SRAM에 어떤 타일도 없는 경우
+    if num_of_tile == 0: #If there are no tiles in SRAM
         needed_blocks = ceil(data[0][1] / block_size)
         if 'alloc' in data[0][0]:
             if needed_blocks > total_blocks:
@@ -180,15 +180,15 @@ def load_tile_to_sram_cont(
 
 
             status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-            sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
+            sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
             for block in allocated_blocks:
-                sram_table[block] = 1  # 블록 테이블 업데이트
+                sram_table[block] = 1 # Update block table
             sram_status = sort_sram_status(sram_status)
             data[0][1] -= len(allocated_blocks) * block_size
             data[0][1] = max(data[0][1], 0)
 
             if status_flag == 1:
-                data.pop(0)  # 전체 할당 완료된 경우 제거
+                data.pop(0) # Remove if all allocation is complete
 
         else:
             if loadable_amount >= ceil(data[0][1] / block_size)*block_size:
@@ -205,16 +205,16 @@ def load_tile_to_sram_cont(
 
 
                 status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-                sram_status.append([data[0][0], allocated_blocks, status_flag])  # 일반 타일 추가
+                sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add regular tiles
                 for block in allocated_blocks:
-                    sram_table[block] = 1  # 블록 테이블 업데이트
+                    sram_table[block] = 1 # Update block table
                 sram_status = sort_sram_status(sram_status)
                 loadable_amount = max(loadable_amount - len(allocated_blocks) * block_size, 0)
                 data[0][1] -= len(allocated_blocks) * block_size
                 data[0][1] = max(data[0][1], 0)
 
                 if status_flag == 1:
-                    data.pop(0)  # 전체 할당 완료된 경우 제거
+                    data.pop(0) # Remove if all allocation is complete
 
                 if len(data) == 0:
                     with open(file_path, 'w') as f:
@@ -222,7 +222,7 @@ def load_tile_to_sram_cont(
                     return 0, sram_status, sram_table, orig_loadable
 
 
-                if len(data) > 0 and 'alloc' in data[0][0]:  # 다음 타일이 alloc 타일인 경우
+                if len(data) > 0 and 'alloc' in data[0][0]: # If the next tile is an alloc tile
                     needed_blocks = ceil(data[0][1] / block_size)
                     allocated_blocks, find_overhead = addr_decider(sram_table, needed_blocks)
                     tot_find_overhead += find_overhead 
@@ -230,11 +230,11 @@ def load_tile_to_sram_cont(
                         loadable_amount = 0
                     else:
                         status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-                        sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
+                        sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
                         data[0][1] -= len(allocated_blocks) * block_size
                         data[0][1] = max(data[0][1], 0)
                         for block in allocated_blocks:
-                            sram_table[block] = 1  # 블록 테이블 업데이트
+                            sram_table[block] = 1 # Update block table
                         sram_status = sort_sram_status(sram_status)
                         if status_flag == 1: data.pop(0)
 
@@ -244,7 +244,7 @@ def load_tile_to_sram_cont(
 
     else:
         for i in range(len(sram_status)):
-            if sram_status[i][2] == 0: #SRAM에 transfer 중 끊긴 타일이 있다.(이 타일은 alloc tile은 아니다.)
+            if sram_status[i][2] == 0: #There is a tile in SRAM that was disconnected during transfer. (This tile is not an alloc tile.)
                 needed_blocks = ceil(data[0][1] / block_size)
                 allocated_blocks, find_overhead = addr_decider(sram_table, needed_blocks)
                 tot_find_overhead += find_overhead 
@@ -256,7 +256,7 @@ def load_tile_to_sram_cont(
                 if loadable_amount >= len(allocated_blocks) * block_size:
                     status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
                     sram_status[i][2] = status_flag
-                    sram_status[i][1].extend(allocated_blocks)  # 기존 블록 리스트에 추가
+                    sram_status[i][1].extend(allocated_blocks) # Add to existing block list
                     data[0][1] -= len(allocated_blocks) * block_size
                     data[0][1] = max(data[0][1], 0)
                     for block in allocated_blocks:
@@ -282,7 +282,7 @@ def load_tile_to_sram_cont(
                             loadable_amount = 0
                         else:
                             status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-                            sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
+                            sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
                             data[0][1] -= len(allocated_blocks) * block_size
                             data[0][1] = max(data[0][1], 0)
                             for block in allocated_blocks:
@@ -297,14 +297,14 @@ def load_tile_to_sram_cont(
 
 
 
-                else:  # 일부만 할당 가능
+                else: # Only part of it can be assigned
                     partial_blocks, find_overhead = addr_decider(sram_table, loadable_amount // block_size)
                     tot_find_overhead += find_overhead 
 
                     if len(partial_blocks) == 0:
                         loadable_amount = 0
                     else:
-                        sram_status[i][1].extend(partial_blocks)  # 기존 블록 리스트에 추가
+                        sram_status[i][1].extend(partial_blocks) # Add to existing block list
                         for block in partial_blocks:
                             sram_table[block] = 1
 
@@ -350,7 +350,7 @@ def load_tile_to_sram(
             json.dump(data, f, indent=2)
         return 0, sram_status, sram_table, orig_loadable
 
-    if num_of_tile == 0: #SRAM에 어떤 타일도 없는 경우
+    if num_of_tile == 0: #If there are no tiles in SRAM
         needed_blocks = ceil(data[0][1] / block_size)
         if 'alloc' in data[0][0]:
             if needed_blocks > total_blocks:
@@ -362,15 +362,15 @@ def load_tile_to_sram(
 
 
             status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-            sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
+            sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
             for block in allocated_blocks:
-                sram_table[block] = 1  # 블록 테이블 업데이트
+                sram_table[block] = 1 # Update block table
             sram_status = sort_sram_status(sram_status)
             data[0][1] -= len(allocated_blocks) * block_size
             data[0][1] = max(data[0][1], 0)
 
             if status_flag == 1:
-                data.pop(0)  # 전체 할당 완료된 경우 제거
+                data.pop(0) # Remove if all allocation is complete
 
         else:
             if loadable_amount >= ceil(data[0][1] / block_size)*block_size:
@@ -386,16 +386,16 @@ def load_tile_to_sram(
 
 
                 status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-                sram_status.append([data[0][0], allocated_blocks, status_flag])  # 일반 타일 추가
+                sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add regular tiles
                 for block in allocated_blocks:
-                    sram_table[block] = 1  # 블록 테이블 업데이트
+                    sram_table[block] = 1 # Update block table
                 sram_status = sort_sram_status(sram_status)
                 loadable_amount = max(loadable_amount - len(allocated_blocks) * block_size, 0)
                 data[0][1] -= len(allocated_blocks) * block_size
                 data[0][1] = max(data[0][1], 0)
 
                 if status_flag == 1:
-                    data.pop(0)  # 전체 할당 완료된 경우 제거
+                    data.pop(0) # Remove if all allocation is complete
 
                 if len(data) == 0:
                     with open(file_path, 'w') as f:
@@ -403,7 +403,7 @@ def load_tile_to_sram(
                     return 0, sram_status, sram_table, orig_loadable
 
 
-                if len(data) > 0 and 'alloc' in data[0][0]:  # 다음 타일이 alloc 타일인 경우
+                if len(data) > 0 and 'alloc' in data[0][0]: # If the next tile is an alloc tile
                     needed_blocks = ceil(data[0][1] / block_size)
                     allocated_blocks, find_overhead = addr_decider(sram_table, needed_blocks)
                     tot_find_overhead += find_overhead 
@@ -411,11 +411,11 @@ def load_tile_to_sram(
                         loadable_amount = 0
                     else:
                         status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-                        sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
+                        sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
                         data[0][1] -= len(allocated_blocks) * block_size
                         data[0][1] = max(data[0][1], 0)
                         for block in allocated_blocks:
-                            sram_table[block] = 1  # 블록 테이블 업데이트
+                            sram_table[block] = 1 # Update block table
                         sram_status = sort_sram_status(sram_status)
                         if status_flag == 1: data.pop(0)
 
@@ -425,7 +425,7 @@ def load_tile_to_sram(
 
     else:
         for i in range(len(sram_status)):
-            if sram_status[i][2] == 0: #SRAM에 transfer 중 끊긴 타일이 있다.(이 타일은 alloc tile은 아니다.)
+            if sram_status[i][2] == 0: #There is a tile in SRAM that was disconnected during transfer. (This tile is not an alloc tile.)
                 needed_blocks = ceil(data[0][1] / block_size)
                 allocated_blocks, find_overhead = addr_decider(sram_table, needed_blocks)
                 tot_find_overhead += find_overhead 
@@ -437,7 +437,7 @@ def load_tile_to_sram(
                 if loadable_amount >= len(allocated_blocks) * block_size:
                     status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
                     sram_status[i][2] = status_flag
-                    sram_status[i][1].extend(allocated_blocks)  # 기존 블록 리스트에 추가
+                    sram_status[i][1].extend(allocated_blocks) # Add to existing block list
                     data[0][1] -= len(allocated_blocks) * block_size
                     data[0][1] = max(data[0][1], 0)
                     for block in allocated_blocks:
@@ -463,7 +463,7 @@ def load_tile_to_sram(
                             loadable_amount = 0
                         else:
                             status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-                            sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
+                            sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
                             data[0][1] -= len(allocated_blocks) * block_size
                             data[0][1] = max(data[0][1], 0)
                             for block in allocated_blocks:
@@ -477,14 +477,14 @@ def load_tile_to_sram(
                                 return 0, sram_status, sram_table, orig_loadable
 
 
-                else:  # 일부만 할당 가능
+                else: # Only part of it can be assigned
                     partial_blocks, find_overhead = addr_decider(sram_table, loadable_amount // block_size)
                     tot_find_overhead += find_overhead 
 
                     if len(partial_blocks) == 0:
                         loadable_amount = 0
                     else:
-                        sram_status[i][1].extend(partial_blocks)  # 기존 블록 리스트에 추가
+                        sram_status[i][1].extend(partial_blocks) # Add to existing block list
                         for block in partial_blocks:
                             sram_table[block] = 1
 
@@ -498,10 +498,10 @@ def load_tile_to_sram(
 
                 break
 
-            if i == len(sram_status)-1: #SRAM에 transfer가 중단된 타일이 없는 경우
+            if i == len(sram_status)-1: #If there are no tiles in SRAM where transfer has been interrupted
                 needed_blocks = ceil(data[0][1] / block_size)
 
-                if 'alloc' in data[0][0]: #만약 다음 load해야할 타일이 alloc 타일인 경우
+                if 'alloc' in data[0][0]: #If the next tile to load is an alloc tile
                     allocated_blocks, find_overhead = addr_decider(sram_table, needed_blocks)
                     tot_find_overhead += find_overhead 
 
@@ -529,7 +529,7 @@ def load_tile_to_sram(
 
                     else:
                         status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-                        sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
+                        sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
                         data[0][1] -= len(allocated_blocks) * block_size
                         data[0][1] = max(data[0][1], 0)
                         for block in allocated_blocks:
@@ -538,14 +538,14 @@ def load_tile_to_sram(
                         if status_flag == 1: data.pop(0)
 
                 else:
-                    if loadable_amount >= ceil(data[0][1] / block_size)*block_size: #loadable_amount가 다음 tile을 충분히 다 load할 수 있다면
+                    if loadable_amount >= ceil(data[0][1] / block_size)*block_size: #if loadable_amount is enough to load the next tile
                         allocated_blocks, find_overhead = addr_decider(sram_table, needed_blocks)
                         tot_find_overhead += find_overhead 
 
                         if len(allocated_blocks) == 0:
                             loadable_amount = 0
 
-                        elif len(allocated_blocks) < needed_blocks: #SRAM에 해당 타일을 쪼개어 넣어야 하는 경우,
+                        elif len(allocated_blocks) < needed_blocks: #If the tile needs to be split into SRAM,
                             sram_status.append([data[0][0], allocated_blocks, 0])
                             data[0][1] -= len(allocated_blocks) * block_size
                             data[0][1] = max(data[0][1], 0)
@@ -555,7 +555,7 @@ def load_tile_to_sram(
                             loadable_amount = max(loadable_amount - len(allocated_blocks) * block_size,0)
 
 
-                        elif len (allocated_blocks) == needed_blocks: #SRAM에 해당 타일을 다 넣을 수 있는 자리가 있다면,
+                        elif len (allocated_blocks) == needed_blocks: #If there is space in SRAM to fit all the tiles,
                             sram_status.append([data[0][0], allocated_blocks, 1])
                             data[0][1] -= len(allocated_blocks) * block_size
                             data[0][1] = max(data[0][1], 0)
@@ -580,7 +580,7 @@ def load_tile_to_sram(
 
                                 else:
                                     status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-                                    sram_status.append([data[0][0], allocated_blocks, status_flag])  # Alloc 타일 추가
+                                    sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
                                     data[0][1] -= len(allocated_blocks) * block_size
                                     data[0][1] = max(data[0][1], 0)
                                     sram_status = sort_sram_status(sram_status)
@@ -589,7 +589,7 @@ def load_tile_to_sram(
                                     if status_flag == 1: data.pop(0)
                         else:
                             assert(False) # allocate more tile
-                    else: #loadable_amount가 다음 타일을 충분히 다 load할 수 없다면
+                    else: #loadable_amount is not enough to load the next tile
                         partial_blocks, find_overhead = addr_decider(sram_table, loadable_amount // block_size)
                         tot_find_overhead += find_overhead 
                         if len(partial_blocks) == 0:
@@ -616,15 +616,15 @@ def get_sramutil(sram_list: list,
     ):
     block_size = pcb_module.compute_module.core.block_size
     """
-    현재 사용 중인 SRAM 블록 개수를 계산한다.
+    Calculate the number of SRAM blocks currently in use.
 
     Parameters:
-        sram_list (list): 현재 SRAM 상태 (각 항목은 [타일 이름, 할당된 블록 리스트, 상태] 형태)
+        sram_list (list): Current SRAM status (each item is in the form of [tile name, allocated block list, status])
 
     Returns:
-        int: 사용 중인 SRAM 블록 개수
+        int: Number of SRAM blocks in use
     """
-    sram_usage = sum(len(tile[1]) for tile in sram_list)  # 모든 타일의 블록 개수를 합산
+    sram_usage = sum(len(tile[1]) for tile in sram_list) # Sum up the number of blocks of all tiles
     return sram_usage * block_size
 
 def write_previous_ops_from_sram(
@@ -636,17 +636,17 @@ def write_previous_ops_from_sram(
     ):
     block_size = pcb_module.compute_module.core.block_size
     """
-    이전 연산에 사용된 타일을 SRAM에서 제거하고, 사용된 메모리 양을 계산하며, SRAM 테이블을 업데이트한다.
+    Tiles used in previous operations are removed from SRAM, the amount of memory used is calculated, and the SRAM table is updated.
 
     Parameters:
-        sram_status (list): 현재 SRAM 상태 (각 항목은 [타일 이름, 할당된 블록 리스트, 상태] 형태)
-        sram_table (list): 현재 SRAM 블록 상태 (0 = free, 1 = allocated)
-        ops_name (str): 현재 연산 이름
-        loadable_amount (int): 현재 가능한 SRAM 공간
-        block_size (int): 블록 크기 (bytes)
+        sram_status (list): Current SRAM status (each item is in the form of [tile name, allocated block list, status])
+        sram_table (list): Current SRAM block status (0 = free, 1 = allocated)
+        ops_name (str): Current operation name
+        loadable_amount (int): Current available SRAM space
+        block_size (int): Block size (bytes)
 
     Returns:
-        tuple: (int, list, list) -> (사용 후 남은 공간, 업데이트된 SRAM 상태, 업데이트된 SRAM 테이블)
+        tuple: (int, list, list) -> (space remaining after use, updated SRAM state, updated SRAM table)
     """
     ops_order = [
         'MHA',
@@ -664,38 +664,38 @@ def write_previous_ops_from_sram(
     ]
     target_idx = 0
 
-    ### Flash Attention 처리 ###
+    ### Flash Attention Processing ###
     use_flash_attention = any(
         'w0_projection' in ops_name and 'q_mul_k' in item[0] for item in sram_status
     )
 
-    ### 목표 연산 인덱스 찾기 ###
+    ### Find target operation index ###
     for i, op in enumerate(ops_order):
         if 'MHA' in ops_name:
-            target_idx = 11  # 'w2_projection'이 최종 연산
+            target_idx = 11 # 'w2_projection' is the final operation
         elif op in ops_name:
             target_idx = i - 1
             if 'w0_projection' in ops_name and use_flash_attention:
-                target_idx = 4  # Flash Attention 적용 시 'q_mul_k' 이후 연산까지 필요
+                target_idx = 4 # When applying Flash Attention, calculations after 'q_mul_k' are required
     used_amount = 0
     tmp_sram_status = []
 
-    # 불필요한 연산 제거 및 사용한 메모리 계산
+    # Eliminate unnecessary operations and calculate used memory
     for tile in sram_status:
-        if ops_order[target_idx] not in tile[0]:  # 이전 연산이 아닌 경우 유지
+        if ops_order[target_idx] not in tile[0]: # keep if not previous operation
             tmp_sram_status.append(tile)
-        elif 'alloc' in tile[0]:  # Alloc 타일인 경우 사용량 계산
-            #print("DEBUG", tile)  # 블록 개수 기준 사용량 계산
-            used_amount += len(tile[1])  # 블록 개수 기준 사용량 계산
-            # SRAM 테이블에서 해당 블록 해제
+        elif 'alloc' in tile[0]: # Calculate usage in case of Alloc tile
+            #print("DEBUG", tile) # Calculate usage based on number of blocks
+            used_amount += len(tile[1]) # Calculate usage based on number of blocks
+            # Release that block from the SRAM table
 
     remained_amount = max(0, loadable_amount - (used_amount * block_size)) 
     sram_status = tmp_sram_status
 
-    sram_table = [0] * len(sram_table)  # 모든 블록을 free 상태로 초기화
+    sram_table = [0] * len(sram_table) # Initialize all blocks to free state
     for tile in sram_status:
         for block in tile[1]:
-            sram_table[block] = 1  # 남아있는 블록을 다시 할당 상태로 설정
+            sram_table[block] = 1 # Set remaining blocks to reallocate state
 
 
     return remained_amount, sram_status, sram_table
@@ -716,18 +716,18 @@ def write_tile_from_sram(
     #print("dec param", dec_param) #1
     #print("sram status", sram_status) 
     """
-    특정 연산에 사용된 타일을 SRAM에서 제거하고, 사용된 메모리 양을 계산한다.
+    Tiles used in a specific operation are removed from SRAM, and the amount of memory used is calculated.
 
     Parameters:
-        sram_status (list): 현재 SRAM 상태 (각 항목은 [타일 이름, 할당된 블록 리스트, 상태] 형태)
-        previous_m_n_k (str): 이전 M, N, K 값
-        pcb_module (Device): 하드웨어 모델
-        ops_name (str): 현재 연산 이름
-        dec_param (int): 결정 파라미터 (0, 1, 2)
-        loadable_amount (int): 현재 가능한 SRAM 공간
+        sram_status (list): Current SRAM status (each item is in the form of [tile name, allocated block list, status])
+        previous_m_n_k (str): Previous M, N, K values
+        pcb_module (Device): Hardware model
+        ops_name (str): Current operation name
+        dec_param (int): decision parameter (0, 1, 2)
+        loadable_amount (int): Current available SRAM space
 
     Returns:
-        tuple: (int, list) -> (사용 후 남은 공간, 업데이트된 SRAM 상태)
+        tuple: (int, list) -> (space remaining after use, updated SRAM status)
     """
 
     if 'a_mul_v' in ops_name and len(ops_name)>8 and ops_name[8] in '0123456789':
@@ -736,9 +736,9 @@ def write_tile_from_sram(
     tmp_sram_status = []
 
 
-    # 불필요한 연산 제거 및 사용된 메모리 계산
+    # Eliminate unnecessary operations and calculate used memory
     for tile in sram_status:
-        if ops_name not in tile[0]:  # 연산이 다르면 유지
+        if ops_name not in tile[0]: # Maintain if operations are different
             tmp_sram_status.append(tile)
         else:
             if 'load' in tile[0]:
@@ -752,7 +752,7 @@ def write_tile_from_sram(
                 if previous_m_n_k not in tile[0]:
                     tmp_sram_status.append(tile)
                 else:
-                    used_amount += len(tile[1])  # 블록 개수 기준 사용량 계산
+                    used_amount += len(tile[1]) # Calculate usage based on number of blocks
     filtered_sram_status = []
     for i in tmp_sram_status:
         previous_mnk = previous_m_n_k.split("_")
@@ -780,17 +780,17 @@ def write_tile_from_sram(
             filtered_sram_status.append(i)
     tmp_sram_status = filtered_sram_status
 
-    remained_amount = max(0, loadable_amount - (used_amount * block_size))  # 사용 후 남은 공간
+    remained_amount = max(0, loadable_amount - (used_amount * block_size)) # Space remaining after use
     if remained_amount < 0:
         #print("DEBUG", loadable_amount, used_amount, block_size, remained_amount)
         raise Exception('remained_amount is negative!')
 
     sram_status = sort_sram_status(tmp_sram_status)
 
-    sram_table = [0] * len(sram_table)  # 모든 블록을 free 상태로 초기화
+    sram_table = [0] * len(sram_table) # Initialize all blocks to free state
     for tile in sram_status:
         for block in tile[1]:
-            sram_table[block] = 1  # 남아있는 블록을 다시 할당 상태로 설정
+            sram_table[block] = 1 # Set remaining blocks to reallocate state
 #    if check_sram_table != sram_table:
 #        raise Exception('sram table error')
 
@@ -806,20 +806,20 @@ def write_ended_block_from_sram(
     loadable_amount: int,
 ):
     """
-    SRAM에서 조건에 맞는 타일의 단 하나의 블록만 write 처리하고,
-    사용한 메모리 크기만큼 loadable_amount에서 차감한다.
+    In SRAM, only one block of the tile that meets the conditions is written,
+    The amount of memory used is deducted from loadable_amount.
 
     Parameters:
-        sram_status (list): 현재 SRAM 상태 (각 항목은 [타일 이름, 할당된 블록 리스트, 상태] 형태)
-        sram_table (list): 현재 SRAM 블록 상태 (0 = free, 1 = allocated)
-        previous_m_n_k (str): 이전 M, N, K 값
-        pcb_module (Device): 하드웨어 모델
-        ops_name (str): 현재 연산 이름
-        dec_param (int): 결정 파라미터 (0, 1, 2)
-        loadable_amount (int): 현재 가능한 SRAM 공간 (bytes)
+        sram_status (list): Current SRAM status (each item is in the form of [tile name, allocated block list, status])
+        sram_table (list): Current SRAM block status (0 = free, 1 = allocated)
+        previous_m_n_k (str): Previous M, N, K values
+        pcb_module (Device): Hardware model
+        ops_name (str): Current operation name
+        dec_param (int): decision parameter (0, 1, 2)
+        loadable_amount (int): Currently available SRAM space (bytes)
 
     Returns:
-        tuple: (남은 SRAM 공간, 업데이트된 SRAM 상태, 업데이트된 SRAM 테이블)
+        tuple: (Remaining SRAM space, updated SRAM state, updated SRAM table)
     """
     previous_m_n_k += "_"
     block_size = pcb_module.compute_module.core.block_size
@@ -851,11 +851,11 @@ def write_ended_block_from_sram(
                 continue
 
             if tile[1] and not block_freed:
-                # 블록 하나만 write 처리
+                # Write only one block
                 freed_block = tile[1].pop(0)
                 sram_table[freed_block] = 0
                 block_freed = True
-                # 블록이 비었으면 tile 제거, 아니면 유지
+                # If the block is empty, remove the tile, otherwise keep it
                 if tile[1]:
                     tmp_sram_status.append(tile)
             else:
@@ -863,7 +863,7 @@ def write_ended_block_from_sram(
         else:
             tmp_sram_status.append(tile)
 
-    # 이전 M/N/K 기준으로 더 정교하게 정렬
+    # More precise sorting based on previous M/N/K
     previous_mnk = previous_m_n_k.split("_")
     filtered_status = []
     for i in tmp_sram_status:
@@ -887,7 +887,7 @@ def write_ended_block_from_sram(
 
     sram_status = sort_sram_status(filtered_status)
 
-    # 테이블 재정의
+    # Redefine table
     sram_table = [0] * len(sram_table)
     for tile in sram_status:
         for block in tile[1]:
@@ -913,23 +913,23 @@ def free_tile_from_sram(
     #print("sram status", sram_status) 
 
     """
-    특정 연산에 사용된 타일을 SRAM에서 제거하고, SRAM 테이블을 최신 sram_status를 기반으로 업데이트한다.
+    Tiles used in a specific operation are removed from SRAM, and the SRAM table is updated based on the latest sram_status.
 
     Parameters:
-        sram_status (list): 현재 SRAM 상태 (각 항목은 [타일 이름, 할당된 블록 리스트, 상태] 형태)
-        sram_table (list): 현재 SRAM 블록 상태 (0 = free, 1 = allocated)
-        previous_m_n_k (str): 이전 M, N, K 값
-        pcb_module (Device): 하드웨어 모델
-        ops_name (str): 현재 연산 이름
-        dec_param (int): 결정 파라미터 (0, 1, 2)
+        sram_status (list): Current SRAM status (each item is in the form of [tile name, allocated block list, status])
+        sram_table (list): Current SRAM block status (0 = free, 1 = allocated)
+        previous_m_n_k (str): Previous M, N, K values
+        pcb_module (Device): Hardware model
+        ops_name (str): Current operation name
+        dec_param (int): decision parameter (0, 1, 2)
 
     Returns:
-        tuple: (list, list) -> (업데이트된 SRAM 상태, 업데이트된 SRAM 테이블)
+        tuple: (list, list) -> (updated SRAM state, updated SRAM table)
     """
 
     tmp_sram_status = []
 
-    # 불필요한 타일 제거
+    # Remove unnecessary tiles
     for tile in sram_status: # tile[0] = a_mul_v_load_M_K_0_0_0_
         if ops_name not in tile[0]:  # false
             tmp_sram_status.append(tile)
@@ -940,7 +940,7 @@ def free_tile_from_sram(
                    (dec_param == 0 and 'load_M_K' not in tile[0]) or \
                     previous_m_n_k not in tile[0]:
                     tmp_sram_status.append(tile)
-            elif 'alloc' in tile[0]:  # alloc된 타일은 유지
+            elif 'alloc' in tile[0]: # Allocated tiles are maintained
                 tmp_sram_status.append(tile)
 
     filtered_sram_status = []
@@ -969,14 +969,14 @@ def free_tile_from_sram(
 #    for i in tmp_sram_status:
 #        print("(dec",dec_param,")",i[0], "is prv?", previous_m_n_k)
 
-    # 최종 sram_status 정리
+    # Final sram_status cleanup
     sram_status = sort_sram_status(tmp_sram_status)
 
-    # sram_status 기준으로 sram_table을 다시 세팅 (초기화 후 남아있는 블록만 다시 설정)
-    sram_table = [0] * len(sram_table)  # 모든 블록을 free 상태로 초기화
+    # Reset sram_table based on sram_status (reset only blocks remaining after initialization)
+    sram_table = [0] * len(sram_table) # Initialize all blocks to free state
     for tile in sram_status:
         for block in tile[1]:
-            sram_table[block] = 1  # 남아있는 블록을 다시 할당 상태로 설정
+            sram_table[block] = 1 # Set remaining blocks to reallocate state
 
     return sram_status, sram_table
 
@@ -991,21 +991,21 @@ def store_sram_status(sram_status, sram_table):
 
 def sort_sram_status(sram_status):
     """
-    SRAM 상태를 블록 인덱스 기준으로 정렬하고, 중복된 블록이 있는지 검사한다.
+    The SRAM state is sorted based on the block index and checked for duplicate blocks.
 
     Parameters:
-        sram_status (list): 현재 SRAM 상태 (각 항목은 [타일 이름, 할당된 블록 리스트, 상태] 형태)
+        sram_status (list): Current SRAM status (each item is in the form of [tile name, allocated block list, status])
 
     Returns:
-        list: 정렬된 SRAM 상태 리스트
+        list: Sorted SRAM status list
     """
-    # 블록 리스트의 첫 번째 블록 번호를 기준으로 정렬
+    # Sort based on the first block number in the block list
 #    sram_status = sorted(sram_status, key=lambda x: x[1][0] if x[1] else float('inf'))
 
-    # 중복된 블록이 있는지 검사
+    # Check if there are duplicate blocks
     used_blocks = set()
     for tile in sram_status:
-        for block in tile[1]:  # 할당된 블록 리스트 순회
+        for block in tile[1]: # Traverse the allocated block list
             if block in used_blocks:
                 print(f"Duplicate block detected: {block}")
                 raise Exception("Deduped Tile exists.")
@@ -1054,7 +1054,7 @@ def check_needed_tile_loaded(
                 if i == len(sram_status)-1:
                     needed_tile.append(tile)
  
-    # 모든 타일이 로드되었는지 여부 확인
+    # Check whether all tiles are loaded
     if len(needed_tile) == 0:
         is_loaded = True
     if is_loaded == True:
@@ -1081,41 +1081,41 @@ def flash_attention_write(
 ):
     block_size = pcb_module.compute_module.core.block_size
     """
-    Flash Attention을 위해 이전 연산의 타일을 SRAM에서 제거하고, 사용된 메모리 양을 계산하며, SRAM 테이블을 업데이트한다.
+    For Flash Attention, tiles from previous operations are removed from SRAM, the amount of used memory is calculated, and the SRAM table is updated.
 
     Parameters:
-        sram_status (list): 현재 SRAM 상태 (각 항목은 [타일 이름, 할당된 블록 리스트, 상태] 형태)
-        sram_table (list): 현재 SRAM 블록 상태 (0 = free, 1 = allocated)
-        prev_ops_name (str): 이전 연산 이름
-        pcb_module (Device): 하드웨어 모델
-        ops_name (str): 현재 연산 이름
-        loadable_amount (int): 현재 가능한 SRAM 공간
+        sram_status (list): Current SRAM status (each item is in the form of [tile name, allocated block list, status])
+        sram_table (list): Current SRAM block status (0 = free, 1 = allocated)
+        prev_ops_name (str): Previous operation name
+        pcb_module (Device): Hardware model
+        ops_name (str): Current operation name
+        loadable_amount (int): Current available SRAM space
 
     Returns:
-        tuple: (int, list, list) -> (사용 후 남은 공간, 업데이트된 SRAM 상태, 업데이트된 SRAM 테이블)
+        tuple: (int, list, list) -> (space remaining after use, updated SRAM state, updated SRAM table)
     """
 
     tmp_sram_status = []
     used_amount = 0
 
-    # 이전 연산(`prev_ops_name`)에서 사용된 `alloc` 타일 제거
+    # Remove `alloc` tile used in previous operation (`prev_ops_name`)
     for item in sram_status:
-        if prev_ops_name not in item[0]:  # 현재 연산이 아니면 유지
+        if prev_ops_name not in item[0]: # If not the current operation, keep it
             tmp_sram_status.append(item)
-        elif 'alloc' in item[0]:  # alloc된 타일인 경우
-            used_amount += len(item[1])  # 블록 개수 기준 사용량 계산
+        elif 'alloc' in item[0]: # In case of an allocated tile
+            used_amount += len(item[1]) # Calculate usage based on number of blocks
 
-    # 사용한 공간만큼 `remained_amount` 업데이트
+    # Update `remained_amount` according to the space used
     remained_amount = loadable_amount + (used_amount * block_size)
 
-    # 최종 sram_status 정리
+    # Final sram_status cleanup
     sram_status = sort_sram_status(tmp_sram_status)
 
-    #  최종 `sram_status` 기준으로 `sram_table`을 재구성
-    sram_table = [0] * len(sram_table)  # 모든 블록을 free 상태로 초기화
+    # Reconfigure `sram_table` based on final `sram_status`
+    sram_table = [0] * len(sram_table) # Initialize all blocks to free state
     for tile in sram_status:
         for block in tile[1]:
-            sram_table[block] = 1  # 남아있는 블록을 다시 할당 상태로 설정
+            sram_table[block] = 1 # Set remaining blocks to reallocate state
 
     return remained_amount, sram_status, sram_table
 

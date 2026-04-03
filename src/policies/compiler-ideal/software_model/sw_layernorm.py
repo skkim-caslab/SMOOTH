@@ -91,7 +91,6 @@ class LayerNorm(Operator):
             pcb_module.compute_module.l2_size // (l2_tile_N * data_type.word_size) // 2
         )
         l2_tile_M = min(l2_tile_M, M)
-#        print('l2_tile_M, l2_tile_N : ', l2_tile_M, l2_tile_N)
         l1_tile_N = N
         l1_tile_M = pcb_module.compute_module.core.SRAM_size // (
             2 * l1_tile_N * data_type.word_size
@@ -113,8 +112,6 @@ class LayerNorm(Operator):
         self.latency = self.best_latency
         M_size = self.best_mapping.l1_tile_M
         N_size = self.best_mapping.l1_tile_N
-#        print("Tile size, ", M_size, N_size)
-        # self.best_mapping.display()
         return self.best_cycle_count
 
     def simulate(
@@ -225,7 +222,6 @@ class LayerNorm(Operator):
             l1_tile_cycle_count = (
                 l1_tile.read_cycle_count * 3
                 + l1_tile.write_cycle_count
-                #+ l1_tile.compute_cycle_count
                 + l1_tile.compute_mean_cycle_count
                 + l1_tile.compute_var_cycle_count
                 + l1_tile.compute_norm_cycle_count
@@ -237,7 +233,6 @@ class LayerNorm(Operator):
                 + (ceil(N / l1_tile_N) - 1) * (l1_tile.reduction_cycle_count)
             )
             
-            #file_path = "./Tiles/whole_tile_list.json"
             process_dir = f"./Tiles"
             os.makedirs(process_dir, exist_ok=True)
 
@@ -288,7 +283,6 @@ class LayerNorm(Operator):
             l1_tile_cycle_count = (
                 l1_tile.read_cycle_count * 3
                 + l1_tile.write_cycle_count
-                #+ l1_tile.compute_cycle_count
                 + l1_tile.compute_mean_cycle_count
                 + l1_tile.compute_var_cycle_count
                 + l1_tile.compute_norm_cycle_count
@@ -315,7 +309,6 @@ class LayerNorm(Operator):
             while(is_loaded == False):
                 loadable_amount = pcb_module.compute_module.core.SRAM_size
                 if(write_or_free_ended):
-#                    print(f"######### Load for compute for {ops_name}_mean without hiding compute_cycle ###############")
                     remained_amount, sram_status = sram.load_tile_to_sram(
                         sram_status, pcb_module, loadable_amount
                     )
@@ -326,7 +319,6 @@ class LayerNorm(Operator):
                     print("io cycle(X2) : ", l1_tile.read_cycle_count)
                     print("current cycle(X3) : ",  l1_tile.read_cycle_count)
                     print("sram occupancy[%](Y2) : ",  sram.get_sramutil(sram_status) / pcb_module.compute_module.core.SRAM_size * 100)
-                    print("sram status : ",  sram_status)
                     print('memory bw util[%](Y1) : ',  100)
                     print("va util[%](Y3) : ", 0)
                     print("sa util[%](Y2) : ",  0)
@@ -337,18 +329,14 @@ class LayerNorm(Operator):
                     )
                     write_or_free_ended = True
 
-#                print('sram_status :', sram_status)
                 is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, 0, 0, 0, ops_name+'_mean')
 
-#            print(f"############ Compute for {ops_name} Mean Begin ###############")
             loadable_amount = l1_tile.compute_mean_cycle_count * pcb_module.compute_module.l2_bandwidth_per_cycle / data_type.word_size
             remained_amount, sram_status = sram.write_previous_ops_from_sram(
                 sram_status, ops_name, loadable_amount
             )
-#            print('After write_previous_ops sram_status : ', sram_status)
             loadable_amount = remained_amount
             while(loadable_amount != 0): # Cycle with compute_mean cycle
-#                print('loadable_amount during compute mean : ', loadable_amount)
                 loadable_amount, sram_status = sram.load_tile_to_sram(
                     sram_status, pcb_module, loadable_amount 
                 )
@@ -364,15 +352,12 @@ class LayerNorm(Operator):
             print("va util[%](Y3) : ", l1_tile.util_rate_var*100)
             print("sa util[%](Y2) : ",  0)
             print('memory bw util[%](Y1) : ',  100)
-            print("sram status : ",  sram_status)
 
             is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, 0, 0, 0, ops_name+'_var')
-#            print("SKKIM ##################", is_loaded, needed_tile)
             write_or_free_ended = False
             while(is_loaded == False):
                 loadable_amount = pcb_module.compute_module.core.SRAM_size
                 if(write_or_free_ended):
-#                    print(f"######### Load for compute for {ops_name}_var without hiding compute_cycle ##############")
                     remained_amount, sram_status = sram.load_tile_to_sram(
 
                         sram_status, pcb_module, loadable_amount
@@ -387,7 +372,6 @@ class LayerNorm(Operator):
                     print("va util[%](Y3) : ", 0)
                     print("sa util[%](Y2) : ",  0)
                     print('memory bw util[%](Y1) : ',  100)
-                    print("sram status : ",  sram_status)
 
                 else:
                     remained_amount, sram_status = sram.write_previous_ops_from_sram(
@@ -396,11 +380,8 @@ class LayerNorm(Operator):
                     write_or_free_ended = True
                 is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, 0, 0, 0, ops_name+'_var')
 
-
-#            print(f"############ Compute {ops_name} Var Begin ###############")
             loadable_amount = l1_tile.compute_var_cycle_count * pcb_module.compute_module.l2_bandwidth_per_cycle / data_type.word_size
             while(loadable_amount != 0): # Cycle with compute_var cycle
-#                print('loadable_amount during compute var : ', loadable_amount)
                 loadable_amount, sram_status = sram.load_tile_to_sram(
                     sram_status, pcb_module, loadable_amount 
                 )
@@ -416,7 +397,6 @@ class LayerNorm(Operator):
             print("va util[%](Y3) : ", l1_tile.util_rate_var*100)
             print("sa util[%](Y2) : ",  0)
             print('memory bw util[%](Y1) : ',  100)
-            print("sram status : ",  sram_status)
 
 
             is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, 0, 0, 0, ops_name+'_norm')
@@ -424,7 +404,6 @@ class LayerNorm(Operator):
             while(is_loaded == False):
                 loadable_amount = pcb_module.compute_module.core.SRAM_size
                 if(write_or_free_ended):
-#                    print(f"######### Load for compute for {ops_name}_norm without hiding compute_cycle ##############")
                     remained_amount, sram_status = sram.load_tile_to_sram(
                         sram_status, pcb_module, loadable_amount
                     )
@@ -445,12 +424,9 @@ class LayerNorm(Operator):
             print("va util[%](Y3) : ", 0)
             print("sa util[%](Y2) : ",  0)
             print('memory bw util[%](Y1) : ',  100)
-            print("sram status : ",  sram_status)
 
-#            print(f"############ Compute {ops_name} Norm Begin ###############")
             loadable_amount = l1_tile.compute_norm_cycle_count * pcb_module.compute_module.l2_bandwidth_per_cycle / data_type.word_size
             while(loadable_amount != 0): # Cycle with compute_norm cycle
-#                print('loadable_amount during compute norm : ', loadable_amount)
                 loadable_amount, sram_status = sram.load_tile_to_sram(
                     sram_status, pcb_module, loadable_amount 
                 )
@@ -466,13 +442,8 @@ class LayerNorm(Operator):
             print("va util[%](Y3) : ", l1_tile.util_rate_norm*100)
             print("sa util[%](Y2) : ",  0)
             print('memory bw util[%](Y1) : ',  100)
-            print("sram status : ",  sram_status)
 
             # 1 write
-            #sram_status = sram.write_tile_from_sram(
-            #    sram_status, M, N, -1, l1_tile_M, l1_tile_N, -1, pcb_module, ops_name
-            #)
-            #print("After write sram status : ", sram_status)
 
             sram.store_sram_status(sram_status)
 
@@ -486,10 +457,7 @@ class LayerNorm(Operator):
             print("va util[%](Y3) : ", 0)
             print("sa util[%](Y2) : ",  0)
             print('memory bw util[%](Y1) : ',  100)
-            print("sram status : ",  sram_status)
 
-            print("accum compute cycle(X1) : ", compute_time_tick)
-            print("accum io cycle(X2) : ", io_time_tick)
 
             return time_tick
 

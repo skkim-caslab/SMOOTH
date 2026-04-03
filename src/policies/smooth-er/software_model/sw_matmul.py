@@ -1130,7 +1130,7 @@ class Matmul(Operator):
                         remained_amount, sram_status, sram_table, tot_find_overhead = sram.load_tile_to_sram(
                             sram_status, sram_table, chiplet_module, loadable_amount 
                         )
-                    else: # 만약 compute에 필요한 tile이 sram에 없다면, 우선, write를 진행한 후에 load 해야함.
+                    else: # If the tile needed for compute is not in sram, you must first proceed with writing and then load it.
                         if (m, n, k) == (0, 0, 0):
                             remained_amount, sram_status, sram_table = sram.write_previous_ops_from_sram(
                                 sram_status, sram_table, ops_name, loadable_amount, chiplet_module
