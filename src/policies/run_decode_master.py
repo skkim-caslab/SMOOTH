@@ -23,7 +23,7 @@ MODEL_CONFIG = {
 }
 
 # ==========================================
-# [모드 1] Energy 측정 모드 (TARGET_LEN == 0)
+# [Mode 1] Energy Measurement (TARGET_LEN == 0)
 # ==========================================
 if TARGET_LEN == 0:
     BLOCK_SIZE = int(sys.argv[3])
@@ -39,7 +39,7 @@ if TARGET_LEN == 0:
 
         json_path = "./Tiles/test_tile/double_512_N_large.json"
         
-        # 디렉토리명 매핑
+        # directory name mapping
         out_len_map = {1025: "1K", 8193: "8K", 32769: "32K"}
         block_size_map = {256: "256", 512: "512", 1024: "1K", 2048: "2K", 4096: "4K"}
         
@@ -58,20 +58,19 @@ if TARGET_LEN == 0:
         print(f"[Energy Mode] Running: {' '.join(cmd)} > {target_file}")
         
         try:
-            # 파싱 없이 stdout을 파일 객체로 직접 연결 (쉘의 '>' 연산자와 동일)
+            # save stdout
             with open(target_file, "w") as f:
                 subprocess.run(cmd, stdout=f, text=True, check=True, cwd=POLICY_NAME)
                 
         except subprocess.CalledProcessError:
             print(f"Error in Energy Simulation {POLICY_NAME}: out_len {OUTPUT_LEN}, block_size {BLOCK_SIZE}")
 
-    # 에너지 측정 1회 수행 후 깔끔하게 스크립트 종료
     run_single_energy_sim()
     sys.exit(0)
 
 
 # ==========================================
-# [모드 2] 기존 시뮬레이션 모드 (TARGET_LEN != 0)
+# [Mode 2] Simulation for TTFT, TTLT calculation
 # ==========================================
 ROOFTOP_INTERVAL = int(sys.argv[3]) if len(sys.argv) > 3 else 1
 POLICY_NAME = sys.argv[4] if len(sys.argv) > 4 else "smooth"

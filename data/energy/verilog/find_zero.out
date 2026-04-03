@@ -39,3 +39,45 @@
 
    Chip area for module '\find_longest_zero_run': 37.047780
 
+Startpoint: _348_ (rising edge-triggered flip-flop clocked by clk)
+Endpoint: _360_ (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+  Delay    Time   Description
+---------------------------------------------------------
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00 ^ _348_/CLK (DFFASRHQNx1_ASAP7_75t_SRAM)
+  94.14   94.14 v _348_/QN (DFFASRHQNx1_ASAP7_75t_SRAM)
+  79.51  173.65 v _208_/Y (OR5x1_ASAP7_75t_SRAM)
+  75.60  249.25 v _222_/Y (OR5x1_ASAP7_75t_SRAM)
+  49.63  298.88 v _228_/Y (OR3x1_ASAP7_75t_SRAM)
+  51.16  350.04 v _234_/Y (OR4x1_ASAP7_75t_SRAM)
+  14.31  364.35 ^ _235_/Y (A2O1A1Ixp33_ASAP7_75t_SRAM)
+   0.00  364.35 ^ _360_/D (DFFASRHQNx1_ASAP7_75t_SRAM)
+         364.35   data arrival time
+
+   1.06    1.06   clock clk (rise edge)
+   0.00    1.06   clock network delay (ideal)
+   0.00    1.06   clock reconvergence pessimism
+           1.06 ^ _360_/CLK (DFFASRHQNx1_ASAP7_75t_SRAM)
+ -38.53  -37.46   library setup time
+         -37.46   data required time
+---------------------------------------------------------
+         -37.46   data required time
+        -364.35   data arrival time
+---------------------------------------------------------
+        -401.81   slack (VIOLATED)
+
+
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power
+----------------------------------------------------------------
+Sequential             1.24e-01   3.18e-03   1.18e-08   1.28e-01  92.8%
+Combinational          6.20e-03   3.69e-03   4.61e-09   9.89e-03   7.2%
+Macro                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  1.31e-01   6.88e-03   1.64e-08   1.37e-01 100.0%
+                          95.0%       5.0%       0.0%

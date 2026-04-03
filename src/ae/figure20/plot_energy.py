@@ -322,21 +322,3 @@ for out_len in output_lengths:
         total_nrg = base_nrg + ov_nrg
         print(f"      {block_str_map[bs]:>4}B : {base_nrg:.6f} J  +  {ov_nrg:.2e} J  =  {total_nrg:.6f} J")
 
-# =============================================================================
-# 6. Print Area Overhead Results (Table Format)
-# =============================================================================
-print("\n" + "="*44)
-print(" Hardware Module Area Overhead")
-print("="*44)
-print(f"| {'Module Name':<18} | {'Area (um^2)':<17} |")
-print("-" * 44)
-
-total_area = 0.0
-for mod in hw_modules:
-    area = hw_stats[mod]['area']
-    total_area += area
-    print(f"| {mod:<18} | {area:>17.6f} |")
-
-print("-" * 44)
-print(f"| {'Total Overhead':<18} | {total_area:>17.6f} |")
-print("="*44 + "\n")

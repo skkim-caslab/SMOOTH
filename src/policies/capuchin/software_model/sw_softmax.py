@@ -89,15 +89,12 @@ class Softmax(Operator):
         )
         l2_tile_M = min(l2_tile_M, M)
 
-        #print('l2_tile_M, l2_tile_N : ', l2_tile_M, l2_tile_N)
         is_l2_double_buffering = False
-        #l2_tile_M = 128 
         l2_tile_M = M
         l2_tile_N = N
         is_l2_double_buffering = False
-        l1_tile_M = self.tile_config['softmax']['l1_tile_M'] #1
-        l1_tile_N = self.tile_config['softmax']['l1_tile_N'] #3073 
-#        l1_tile_N = self.seq_len
+        l1_tile_M = self.tile_config['softmax']['l1_tile_M'] 
+        l1_tile_N = self.tile_config['softmax']['l1_tile_N']  
         is_l1_double_buffering = True
 
         mapping = self.Mapping(
@@ -116,10 +113,8 @@ class Softmax(Operator):
 
         self.best_mapping = best_mapping
         self.best_cycle_count = min_cycle_count
-        #self.best_latency = min_cycle_count / pcb_module.compute_module.clock_freq
         self.best_latency = min_cycle_count 
         self.latency = self.best_latency
-##        self.best_mapping.display()
         M_size = self.best_mapping.l1_tile_M
         N_size = self.best_mapping.l1_tile_N
         is_l2_double_buffering = self.best_mapping.is_l2_double_buffering
@@ -127,8 +122,6 @@ class Softmax(Operator):
         l2_tile_N = self.best_mapping.l2_tile_N
         is_l1_double_buffering = self.best_mapping.is_l1_double_buffering
 
-        #print("Tile size of Softmax, ", l2_tile_M, l2_tile_N, is_l2_double_buffering, M_size, N_size, is_l1_double_buffering)
-        
         return self.latency
 
     def simulate(
@@ -266,11 +259,6 @@ class Softmax(Operator):
                 tile.collect_tile(
                     m, n, 0, l1_tile_M, l1_tile_N, 0, pcb_module, ops_name, -1
                 )
-            """
-            tile.collect_alloc_tile(
-                M, N, -1, l1_tile_M, l1_tile_N, -1, pcb_module, ops_name
-            )
-            """
 
             return total_cycle_count
 
@@ -336,60 +324,11 @@ class Softmax(Operator):
                             remained_amount, sram_status, sram_table = sram.write_tile_from_sram(
                                 sram_status, sram_table, previous_m_n_k, pcb_module, ops_name, 2, loadable_amount
                             )
-#                        print('sram_status :', sram_status)
-#                        print('sram occupancy[%] :', sram.get_sramutil(sram_status)/pcb_module.compute_module.core.SRAM_size * 100)
-#                        print('sram status :', sram_status)
                         write_or_free_ended = True
 
                     is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, m, n, 0, ops_name)
                     time.sleep(2)
-
-                ''' #skkim: need to for loop - end_cmd
-                current_time =  (l1_tile.compute_cycle_count +l1_tile.read_cycle_count + l1_tile.write_cycle_count)
-                time_tick += current_time
-                print('total cycle(X) : ', time_tick)
-                print('compute cycle(X1) : ', l1_tile.compute_cycle_count)
-                print('VE cycle(X1) : ', l1_tile.compute_cycle_count)
-                loadable_amount = l1_tile.compute_cycle_count * pcb_module.compute_module.l2_bandwidth_per_cycle / pcb_module.compute_module.core.systolic_array.input_word_size
-                if (m, n) == (0, 0):
-                    remained_amount, sram_status, sram_table = sram.write_previous_ops_from_sram(
-                        sram_status, sram_table, ops_name, loadable_amount, pcb_module
-                    )
-                    loadable_amount = remained_amount
-                else:
-                    remained_amount, sram_status, sram_table = sram.write_tile_from_sram(
-                        sram_status, sram_table, previous_m_n_k, pcb_module, ops_name, 2, loadable_amount
-                    )
-
-#                print('remained_amount :', remained_amount)
-                loadable_amount = remained_amount
-                if loadable_amount == float("inf"):
-                    print_io_cycle = current_time
-                else:
-                    print_io_cycle =  ceil(loadable_amount * pcb_module.compute_module.core.systolic_array.input_word_size / pcb_module.compute_module.l2_bandwidth_per_cycle)
-
-                print('io cycle(X2) : ', print_io_cycle)
-                print('current cycle(X3) : ', current_time)
-                print('memory bw util[%](Y1) : 100' )
-                print('va util[%](Y3) : 100' )
-                print('sa util[%](Y3) : 0' )
-                while(loadable_amount != 0):
-#                    print('loadable_amount during softmax compute : ', loadable_amount)
-                    loadable_amount, sram_status, sram_table, tot_find_overhead = sram.load_tile_to_sram(
-                        sram_status, sram_table, pcb_module, loadable_amount
-                    )
-#                    print('sram occupancy[%] :', sram.get_sramutil(sram_status)/pcb_module.compute_module.core.SRAM_size * 100)
-#                    print(' ')
-
-                print('sram occupancy[%] :', sram.get_sramutil(sram_status, pcb_module)/pcb_module.compute_module.core.SRAM_size * 100)
-#                print('sram status :', sram_status)
-                previous_m_n_k = '_' + str(m) + '_' + str(n) + '_0'
-                    
-                '''
                 vector_repeat_time = 1
-                #vector_repeat_time = ceil(l1_tile_M * l1_tile_N /pcb_module.compute_module.core.block_size)
-                print("vector repeat time ", vector_repeat_time)
-#                print("sram status:", sram_status)
                 remained_amount_pre = 0
                 base_cycle_count = l1_tile.compute_cycle_count // vector_repeat_time
                 remainder_cycle_count = l1_tile.compute_cycle_count % vector_repeat_time
@@ -409,7 +348,6 @@ class Softmax(Operator):
                     print('compute cycle(X1) : ', current_compute_cycle)
                     print('VE cycle(X1) : ', current_compute_cycle)
                     loadable_amount = current_compute_cycle * pcb_module.compute_module.l2_bandwidth_per_cycle / pcb_module.compute_module.core.systolic_array.input_word_size + remained_amount_pre
-                    print("SKKIM loadable amount", loadable_amount)
                     if (m, n) == (0, 0):
                         remained_amount, sram_status, sram_table = sram.write_previous_ops_from_sram(
                             sram_status, sram_table, ops_name, loadable_amount, pcb_module
@@ -442,39 +380,18 @@ class Softmax(Operator):
                     print('memory bw util[%](Y1) : 100' )
                     print('va util[%](Y3) : 100' )
                     print('sa util[%](Y3) : 0' )
-#                    print("SKKIM BEFORE PRELOAD", sram_status)
-#                    sram.free_end_tile_from_sram(sram_status, sram_table, ops_name
 
-                    print("SKKIM FREE ENDED BLOCK", ops_name, m, n)
-#                    print("SKKIM FREE ENDED BLOCK", sram_status)
                     while(loadable_amount != 0):
                         loadable_amount, sram_status, sram_table, remained_amount_pre = sram.load_tile_to_sram(
                             sram_status, sram_table, pcb_module, loadable_amount
                         )
-                    '''
-                    if vector_repeat_time == 1:
-                        while(loadable_amount != 0):
-                            loadable_amount, sram_status, sram_table, tot_find_overhead = sram.load_tile_to_sram(
-                                sram_status, sram_table, pcb_module, loadable_amount
-                            )
-                    else:
-                        while(loadable_amount != 0):
-                            loadable_amount, sram_status, sram_table, remained_amount_pre = sram.load_tile_to_sram_with_ended(
-                                sram_status, sram_table, pcb_module, loadable_amount
-                            )
-                    '''
-
                     print('sram occupancy[%] :', sram.get_sramutil(sram_status, pcb_module)/pcb_module.compute_module.core.SRAM_size * 100)
                     previous_m_n_k = '_' + str(m) + '_' + str(n) + '_0'
- #                   print("SKKIM AFTER PRELOAD", sram_status)
 
-                    print('sram status :', sram_status)
-            # N / l1_tile_N 값이 바뀔 경우, Reduction cycle count에 대해서 신경써야할 수 있음.
+#                    print('sram status :', sram_status)
 
             sram.store_sram_status(sram_status, sram_table)
 
-#            print('total cycle(X) : ', total_cycle_count," vs. ",skkim_total_cycle_count)
-            #return total_cycle_count
             return time_tick
 
 
@@ -499,7 +416,6 @@ class Softmax(Operator):
             self.compute_cycle_count = self.simulate_l1_tile_compute_cycle_count(
                 M, N, data_type, mapping, pcb_module
             )
-            #print("DEBUG Softmax:", M, N, self.compute_cycle_count)
             self.write_byte = M * N * data_type.word_size
             self.write_cycle_count = self.simulate_l1_tile_io_cycle_count(
                 M, N, data_type, pcb_module
@@ -536,19 +452,6 @@ class Softmax(Operator):
         ):
             # online softmax
             total_flop_count = M * N * (self.flops_per_exp * 3 + 7)
-            # skkim: want to operate softamx parallel. then need to consider vector width and vector count
-#            M_per_vector_count = ceil(
-#                M / pcb_module.compute_module.core.vector_unit.vector_count
-#            )
-#            N_per_vector_count = N
-#            M_per_vector_lane = M_per_vector_count
-#            N_per_vector_lane = ceil(
-#                N_per_vector_count
-#                / pcb_module.compute_module.core.vector_unit.vector_width
-#            )
-
-#            total_flop_count = M_per_vector_lane * N_per_vector_lane * (self.flops_per_exp * 3 + 7)
-
             return ceil(
                 total_flop_count
                 / pcb_module.compute_module.core.vector_unit.total_vector_flops_per_cycle

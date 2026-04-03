@@ -30,3 +30,12 @@ cd $SMOOTH_HOME
 cd src/ae/figure20
 python plot_energy.py
 -> src/ae/figure20/energy_8MB.eps
+
+##6. get table: table 1, table 2
+cd $SMOOTH_HOME
+cd src/ae/table1
+python get_area.py
+
+cd $SMOOTH_HOME
+cd src/ae/table2
+python get_power.py
