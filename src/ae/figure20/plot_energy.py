@@ -39,15 +39,7 @@ policy_labels = {
 # 파일 경로 포맷
 energy_out_dir = '../../../data/energy/energy_out'
 seq_32k_dir = f'../../../data/seq_32K/{sram_size}'
-
-# 하드웨어 합성 결과(.out)에서 추출한 Power 및 Latency 상수
-hw_stats = {
-    'find_zero': {'time': 364.35e-12, 'total_pwr': 1.37e-01, 'leakage_pwr': 1.64e-08},
-    'alloc': {'time': 1955.46e-12, 'total_pwr': 7.01e-01, 'leakage_pwr': 7.96e-08},
-    'address_check': {'time': 83.70e-12, 'total_pwr': 3.05e-02, 'leakage_pwr': 3.24e-09},
-    'bt_lookup': {'time': 615.18e-12, 'total_pwr': 2.26e-01, 'leakage_pwr': 2.53e-08},
-    'free': {'time': 415.49e-12, 'total_pwr': 4.00e-02, 'leakage_pwr': 5.72e-09}
-}
+verilog_dir = '../../../data/energy/verilog'
 
 BASELINE_NPU_POWER_W = 4.0 
 
@@ -57,6 +49,41 @@ hatch_pattern = '//'
 # =============================================================================
 # 2. Data Parsing Functions
 # =============================================================================
+def parse_verilog_out(filepath):
+    """Verilog .out 파일에서 time, leakage_pwr, total_pwr, area를 파싱"""
+    stats = {'time': 0.0, 'total_pwr': 0.0, 'leakage_pwr': 0.0, 'area': 0.0}
+    if not os.path.exists(filepath):
+        print(f"Warning: {filepath} not found. Using default zeros.")
+        return stats
+        
+    with open(filepath, 'r') as f:
+        content = f.read()
+
+    # 1. Time 파싱 (data arrival time의 절대값 추출 후 초 단위 변환, ps -> s)
+    time_matches = re.findall(r'(\d+\.\d+)\s+data arrival time', content)
+    if time_matches:
+        stats['time'] = float(time_matches[0]) * 1e-12
+
+    # 2. Power 파싱 (Total 행에서 Leakage Power와 Total Power 추출)
+    power_match = re.search(r'Total\s+[\d\.eE\+\-]+\s+[\d\.eE\+\-]+\s+([\d\.eE\+\-]+)\s+([\d\.eE\+\-]+)\s+[\d\.]+%?', content)
+    if power_match:
+        stats['leakage_pwr'] = float(power_match.group(1))
+        stats['total_pwr'] = float(power_match.group(2))
+        
+    # 3. Area 파싱 (Chip area for module '\module_name': 값)
+    area_match = re.search(r"Chip area for module\s+'[^']+':\s+([\d\.]+)", content)
+    if area_match:
+        stats['area'] = float(area_match.group(1))
+
+    return stats
+
+# 하드웨어 모듈 목록에 맞춰 동적으로 hw_stats 딕셔너리 생성
+hw_modules = ['find_zero', 'alloc', 'address_check', 'bt_lookup', 'free']
+hw_stats = {}
+for mod in hw_modules:
+    out_path = os.path.join(verilog_dir, f"{mod}.out")
+    hw_stats[mod] = parse_verilog_out(out_path)
+
 def get_policy_latency(policy, model_name, target_out_len):
     """기존 정책들의 Latency 파싱"""
     filepath = os.path.join(seq_32k_dir, policy, f"{model_name}.out")
@@ -109,7 +136,8 @@ def get_block_overhead_counts(block_size_int, out_len_str, model_name):
 def calculate_overhead_energy(find_zero, frag, addr_check, total_latency):
     """오버헤드 모듈의 에너지 소모량 계산 (J 단위로 변환하여 반환)"""
     PW_TO_W = 1e-12
-    dyn_pwr = {k: (v['total_pwr'] - v['leakage_pwr'])* PW_TO_W for k, v in hw_stats.items()}
+    # parse_verilog_out 에서 받아온 total_pwr와 leakage_pwr를 사용
+    dyn_pwr = {k: (v['total_pwr'] - v['leakage_pwr']) * PW_TO_W for k, v in hw_stats.items()}
     counts = {
         'find_zero': find_zero,
         'alloc': find_zero,
@@ -124,9 +152,6 @@ def calculate_overhead_energy(find_zero, frag, addr_check, total_latency):
         
     static_energy = sum(hw_stats[k]['leakage_pwr'] for k in hw_stats) * total_latency
     
-    # 기존 코드 로직상 mJ로 산출된다면 1000으로 나누어 Joules로 변환
-    # (hw_stats의 pwr가 Watts, time이 s라면 이미 Joules임. 
-    # 기존 코드 주석의 mJ 단위를 맞추기 위해 계산 결과에 따른 보정이 필요할 수 있음)
     return (dyn_energy + static_energy) 
 
 # =============================================================================
@@ -168,7 +193,7 @@ gs = gridspec.GridSpec(1, len(output_lengths), wspace=0.21)
 x_baselines = [0, 1, 2]
 x_blocks = [4, 5, 6, 7, 8]
 x_ticks = x_baselines + x_blocks
-x_ticklabels = ['Compiler-\n     Ideal', 'Gemmini', 'Capuchin', '256B', '512B', '1KB', '2KB', '4KB']
+x_ticklabels = ['Compiler-\n    Ideal', 'Gemmini', 'Capuchin', '256B', '512B', '1KB', '2KB', '4KB']
 bar_width = 0.7
 axes = []
 
@@ -199,7 +224,6 @@ for i, out_len in enumerate(output_lengths):
         ax.set_yticks([0, 0.2, 0.4])
         ax.set_ylabel('Energy (J)')
 
-
     elif i == 1: # (b) 8K Token
         ax.set_ylim(0, 0.5)
         ax.set_yticks([0, 0.3, 0.6])
@@ -207,81 +231,67 @@ for i, out_len in enumerate(output_lengths):
     elif i == 2: # (c) 32K Token
         ax.set_ylim(0, 1.4)
         ax.set_yticks([0, 0.7, 1.4])
-# ==========================================
-        # 1. 첫 번째 돋보기 창: 512B 단독 확대
-        # ==========================================
-        axins1 = ax.inset_axes([0.45, 0.48, 0.23, 0.38]) # 1개의 바만 담도록 폭과 위치 조정
-        
-        axins1.bar(x_blocks, energy_data[out_len]['smooth-er'], width=bar_width, color=colors['smooth-er'], edgecolor='black')
-        axins1.bar(x_blocks, overhead_energy_data[out_len], width=bar_width, bottom=energy_data[out_len]['smooth-er'], 
-                   color=colors['overhead'], hatch=hatch_pattern, edgecolor='black')
-        
-        target_idx_1 = 1 # 512B 인덱스
-        min_base_1 = energy_data[out_len]['smooth-er'][target_idx_1]
-        max_total_1 = energy_data[out_len]['smooth-er'][target_idx_1] + overhead_energy_data[out_len][target_idx_1]
-        max_overhead_1 = overhead_energy_data[out_len][target_idx_1]
-        
-        # 텍스트 상단 여백 확보
-        margin_y_1 = max_overhead_1 * 2.5 if max_overhead_1 > 0 else 1e-8
-        axins1.set_ylim(min_base_1 - (margin_y_1 * 0.2), max_total_1 + margin_y_1)
-        
-        axins1.set_xlim(x_blocks[target_idx_1] - (bar_width / 2) - 0.1, x_blocks[target_idx_1] + (bar_width / 2) + 0.1)
-#        axins1.set_xticks([x_blocks[target_idx_1]])
-        axins1.set_xticks([])
-#        axins1.set_xticklabels(['512B'], fontsize=12)
 
-        # Y축 눈금 숨김
-        axins1.set_yticks([])
+    # ==========================================
+    # 1. 첫 번째 돋보기 창: 512B 단독 확대
+    # ==========================================
+    axins1 = ax.inset_axes([0.45, 0.48, 0.23, 0.38]) 
+    
+    axins1.bar(x_blocks, energy_data[out_len]['smooth-er'], width=bar_width, color=colors['smooth-er'], edgecolor='black')
+    axins1.bar(x_blocks, overhead_energy_data[out_len], width=bar_width, bottom=energy_data[out_len]['smooth-er'], 
+               color=colors['overhead'], hatch=hatch_pattern, edgecolor='black')
+    
+    target_idx_1 = 1 # 512B 인덱스
+    min_base_1 = energy_data[out_len]['smooth-er'][target_idx_1]
+    max_total_1 = energy_data[out_len]['smooth-er'][target_idx_1] + overhead_energy_data[out_len][target_idx_1]
+    max_overhead_1 = overhead_energy_data[out_len][target_idx_1]
+    
+    # 텍스트 상단 여백 확보
+    margin_y_1 = max_overhead_1 * 2.5 if max_overhead_1 > 0 else 1e-8
+    axins1.set_ylim(min_base_1 - (margin_y_1 * 0.2), max_total_1 + margin_y_1)
+    
+    axins1.set_xlim(x_blocks[target_idx_1] - (bar_width / 2) - 0.1, x_blocks[target_idx_1] + (bar_width / 2) + 0.1)
+    axins1.set_xticks([])
+    axins1.set_yticks([])
 
-        # 512B 막대 위에 오버헤드 절대값(microJ) 텍스트 표기
-        ov_val_1_uJ = max_overhead_1 * 1e9 # J 단위를 microJ (10^6) 단위로 변환
-        
-        # 텍스트 추가 (예: 12.34 μJ)
-        axins1.text(x_blocks[target_idx_1], max_total_1 + (margin_y_1 * 0.1), f"{ov_val_1_uJ:.1f} nJ", 
-                    ha='center', va='bottom', fontsize=16, fontweight='bold', color=colors['overhead'])
+    ov_val_1_uJ = max_overhead_1 * 1e9 # J 단위를 nanoJ (10^9) 단위로 변환
+    axins1.text(x_blocks[target_idx_1], max_total_1 + (margin_y_1 * 0.1), f"{ov_val_1_uJ:.1f} nJ", 
+                ha='center', va='bottom', fontsize=16, fontweight='bold', color=colors['overhead'])
 
-        # ==========================================
-        # 2. 두 번째 돋보기 창: 1KB 단독 확대
-        # ==========================================
-        axins2 = ax.inset_axes([0.72, 0.48, 0.23, 0.38]) 
-        
-        axins2.bar(x_blocks, energy_data[out_len]['smooth-er'], width=bar_width, color=colors['smooth-er'], edgecolor='black')
-        axins2.bar(x_blocks, overhead_energy_data[out_len], width=bar_width, bottom=energy_data[out_len]['smooth-er'], 
-                   color=colors['overhead'], hatch=hatch_pattern, edgecolor='black')
-                  
-        target_idx_2 = 2 # 1KB 인덱스
-        min_base_2 = energy_data[out_len]['smooth-er'][target_idx_2]
-        max_total_2 = energy_data[out_len]['smooth-er'][target_idx_2] + overhead_energy_data[out_len][target_idx_2]
-        max_overhead_2 = overhead_energy_data[out_len][target_idx_2]
-        
-        # 텍스트 상단 여백 확보
-        margin_y_2 = max_overhead_2 * 2.5 if max_overhead_2 > 0 else 1e-8
-        axins2.set_ylim(min_base_2 - (margin_y_2 * 0.2), max_total_2 + margin_y_2)
-        
-        axins2.set_xlim(x_blocks[target_idx_2] - (bar_width / 2) - 0.1, x_blocks[target_idx_2] + (bar_width / 2) + 0.1)
-        axins2.set_xticks([])
-#        axins2.set_xticks([x_blocks[target_idx_2]])
-#        axins2.set_xticklabels(['1KB'], fontsize=12)
-        
-        # Y축 눈금 숨김
-        axins2.set_yticks([])
+    # ==========================================
+    # 2. 두 번째 돋보기 창: 1KB 단독 확대
+    # ==========================================
+    axins2 = ax.inset_axes([0.72, 0.48, 0.23, 0.38]) 
+    
+    axins2.bar(x_blocks, energy_data[out_len]['smooth-er'], width=bar_width, color=colors['smooth-er'], edgecolor='black')
+    axins2.bar(x_blocks, overhead_energy_data[out_len], width=bar_width, bottom=energy_data[out_len]['smooth-er'], 
+               color=colors['overhead'], hatch=hatch_pattern, edgecolor='black')
+              
+    target_idx_2 = 2 # 1KB 인덱스
+    min_base_2 = energy_data[out_len]['smooth-er'][target_idx_2]
+    max_total_2 = energy_data[out_len]['smooth-er'][target_idx_2] + overhead_energy_data[out_len][target_idx_2]
+    max_overhead_2 = overhead_energy_data[out_len][target_idx_2]
+    
+    margin_y_2 = max_overhead_2 * 2.5 if max_overhead_2 > 0 else 1e-8
+    axins2.set_ylim(min_base_2 - (margin_y_2 * 0.2), max_total_2 + margin_y_2)
+    
+    axins2.set_xlim(x_blocks[target_idx_2] - (bar_width / 2) - 0.1, x_blocks[target_idx_2] + (bar_width / 2) + 0.1)
+    axins2.set_xticks([])
+    axins2.set_yticks([])
 
-        # 1KB 막대 위에 오버헤드 절대값(microJ) 텍스트 표기
-        ov_val_2_uJ = max_overhead_2 * 1e9 # J 단위를 microJ (10^6) 단위로 변환
-        
-        axins2.text(x_blocks[target_idx_2], max_total_2 + (margin_y_2 * 0.1), f"{ov_val_2_uJ:.1f} nJ", 
-                    ha='center', va='bottom', fontsize=16, fontweight='bold', color=colors['overhead'])
+    ov_val_2_uJ = max_overhead_2 * 1e9 
+    axins2.text(x_blocks[target_idx_2], max_total_2 + (margin_y_2 * 0.1), f"{ov_val_2_uJ:.1f} nJ", 
+                ha='center', va='bottom', fontsize=16, fontweight='bold', color=colors['overhead'])
 
-        # ==========================================
-        # 확대 선 연결
-        # ==========================================
-        mark_inset(ax, axins1, loc1=3, loc2=4, fc="none", ec="0.5") 
-        mark_inset(ax, axins2, loc1=3, loc2=4, fc="none", ec="0.5")        
+    # 확대 선 연결
+    mark_inset(ax, axins1, loc1=3, loc2=4, fc="none", ec="0.5") 
+    mark_inset(ax, axins2, loc1=3, loc2=4, fc="none", ec="0.5")        
 
     if i == 0:
         ax.set_ylabel('Energy (J)')
 
     ax.axvline(x=3, color='black', linestyle='--', linewidth=1.5, alpha=0.5)
+
 # Legend
 handles, labels = ax.get_legend_handles_labels()
 by_label = dict(zip(labels, handles))
@@ -289,9 +299,10 @@ fig.legend(by_label.values(), by_label.keys(), loc='upper center', bbox_to_ancho
 
 plt.tight_layout()
 plt.savefig('energy_8MB.eps', format='eps', dpi=300, bbox_inches='tight')
-print("Energy comparison plot saved as: energy_comparison_joules.eps")
+print("Energy comparison plot saved as: energy_8MB.eps")
+
 # =============================================================================
-# 5. Print Experimental Results
+# 5. Print Experimental Results (Energy)
 # =============================================================================
 print("\n" + "="*60)
 print(" Experimental Energy Results (Joules)")
@@ -300,19 +311,32 @@ print("="*60)
 for out_len in output_lengths:
     print(f"\n[ Output Length: {out_len} Token ]")
     
-    # Baseline 정책 출력
     for pol in ['compiler-ideal', 'gemmini', 'capuchin']:
         val = energy_data[out_len][pol]
         print(f"  - {policy_labels[pol]:<16}: {val:.6f} J")
         
-    # SMOOTH (Block) 사이즈별 출력 (Base + Overhead)
     print(f"  - {policy_labels['smooth-er']} (Base Energy + Overhead = Total):")
     for idx, bs in enumerate(block_sizes):
         base_nrg = energy_data[out_len]['smooth-er'][idx]
         ov_nrg = overhead_energy_data[out_len][idx]
         total_nrg = base_nrg + ov_nrg
-        
-        # 오버헤드가 매우 작을 수 있으므로 과학적 표기법(e) 혼용
         print(f"      {block_str_map[bs]:>4}B : {base_nrg:.6f} J  +  {ov_nrg:.2e} J  =  {total_nrg:.6f} J")
 
-print("\n" + "="*60 + "\n")
+# =============================================================================
+# 6. Print Area Overhead Results (Table Format)
+# =============================================================================
+print("\n" + "="*44)
+print(" Hardware Module Area Overhead")
+print("="*44)
+print(f"| {'Module Name':<18} | {'Area (um^2)':<17} |")
+print("-" * 44)
+
+total_area = 0.0
+for mod in hw_modules:
+    area = hw_stats[mod]['area']
+    total_area += area
+    print(f"| {mod:<18} | {area:>17.6f} |")
+
+print("-" * 44)
+print(f"| {'Total Overhead':<18} | {total_area:>17.6f} |")
+print("="*44 + "\n")

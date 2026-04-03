@@ -26,3 +26,7 @@ run_all.sh
 
 
 ##5. plot figure 20
+cd $SMOOTH_HOME
+cd src/ae/figure20
+python plot_energy.py
+-> src/ae/figure20/energy_8MB.eps

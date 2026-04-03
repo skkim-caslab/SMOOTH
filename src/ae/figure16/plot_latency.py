@@ -141,7 +141,7 @@ def generate_plot(base_dir, max_seq_len):
     # 필터링: seq_len_0 (Prompt), seq_len_1 (첫 토큰), 그리고 interval 단위
     target_cols = ['seq_len_0', 'seq_len_1'] + [
         col for col in seq_len_cols 
-        if int(col.split('_')[-1]) % interval == 0 and int(col.split('_')[-1]) > 0
+        if int(col.split('_')[-1]) % interval == 1 and int(col.split('_')[-1]) > 0
     ]
     # 중복 제거 및 정렬
     target_cols = sorted(list(set(target_cols)), key=lambda x: int(x.split('_')[-1]))
