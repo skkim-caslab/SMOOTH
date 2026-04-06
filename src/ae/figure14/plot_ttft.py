@@ -139,6 +139,47 @@ def main():
     df = df.dropna(subset=["plot_value"])
 
     # ----------------------------------------------------------------------
+    # Print statistics to verify paper numbers
+    # ----------------------------------------------------------------------
+    print("\n" + "="*50)
+    print("📊 TTFT Statistics Calculation Results")
+    print("="*50)
+
+    # 1. Calculate reduction rate: SMOOTH-ER vs Compiler-Ideal
+    df_smooth_er = df[df["policy"] == "smooth-er"]
+    if not df_smooth_er.empty:
+        # Reduction (%) = (1 - normalized value) * 100
+        smooth_er_reductions = (1 - df_smooth_er["plot_value"]) * 100
+        avg_reduction = smooth_er_reductions.mean()
+        max_reduction = smooth_er_reductions.max()
+        
+        print(f"[SMOOTH-ER (arch-ER)]")
+        print(f" - Avg TTFT reduction (vs Compiler-Ideal): {avg_reduction:.1f}%")
+        print(f" - Max TTFT reduction (vs Compiler-Ideal): {max_reduction:.1f}%")
+    
+    print("-" * 50)
+
+    # 2. Calculate increase/reduction rate: Capuchin vs Compiler-Ideal
+    df_capuchin = df[df["policy"] == "capuchin"]
+    if not df_capuchin.empty:
+        # Increase (%) = (normalized value - 1) * 100
+        capuchin_increases = (df_capuchin["plot_value"] - 1) * 100
+        max_increase = capuchin_increases.max()
+        
+        print(f"[Capuchin]")
+        if max_increase > 0:
+            print(f" - Max TTFT increase (vs Compiler-Ideal): {max_increase:.1f}%")
+        else:
+            print(f" - Max TTFT increase (vs Compiler-Ideal): No increase (Max {max_increase:.1f}%)")
+        
+        # For reference, check Capuchin's reduction for models like GPT
+        capuchin_reductions = -capuchin_increases
+        max_cap_reduction = capuchin_reductions.max()
+        print(f" - Max TTFT reduction (vs Compiler-Ideal): {max_cap_reduction:.1f}%")
+
+    print("="*50 + "\n")
+
+    # ----------------------------------------------------------------------
     # 4. Plot generation
     # ----------------------------------------------------------------------
     sns.set(style="white")

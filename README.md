@@ -6,13 +6,14 @@ This paper is submitted to **ISCA 2026**.
 
 ## 1. Environment Setup
 
-SMOOTH relies on the cycle-accurate simulator [LLMCompass](https://github.com/PrincetonUniversity/LLMCompass) for architectural simulation and [Yosys](https://github.com/YosysHQ/yosys) for hardware logic synthesis. 
+SMOOTH relies on the cycle-accurate simulator [LLMCompass](https://github.com/PrincetonUniversity/LLMCompass) for architectural simulation, [Yosys](https://github.com/YosysHQ/yosys) for hardware logic synthesis, and [OpenSTA](https://github.com/The-OpenROAD-Project/OpenSTA) for static timing analysis.
 
 For your convenience, the **[ASAP7](https://github.com/The-OpenROAD-Project/asap7)** predictive 7nm standard cell library is **already included in this repository** to ensure out-of-the-box hardware synthesis and overhead evaluation.
 
 Please follow the installation guides in their respective official repositories to prepare your environment:
 * **[LLMCompass](https://github.com/PrincetonUniversity/LLMCompass)**: For cycle-accurate LLM inference simulation.
 * **[Yosys](https://github.com/YosysHQ/yosys)**: For synthesizing hardware modules and extracting microarchitectural overheads.
+* **[OpenSTA](https://github.com/The-OpenROAD-Project/OpenSTA)**: Install OpenSTA on your system (e.g., via package manager or source) to enable static timing analysis.
 * **[ASAP7](https://github.com/The-OpenROAD-Project/asap7)**: A 7nm predictive process design kit (PDK) used alongside Yosys to evaluate realistic hardware overheads.
 
 Before running the experiments, set the `SMOOTH_HOME` environment variable to the root directory of this repository:
