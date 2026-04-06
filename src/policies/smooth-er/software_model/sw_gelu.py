@@ -63,7 +63,6 @@ class GeLU(Operator):
             self.data_type = data_type
 
     def compile_and_simulate(self, pcb_module: Device, ops_name: str):
-        compute_cycle_count = 0
         io_cycle_count = 0
         self.computational_graph.data_type = (
             pcb_module.compute_module.core.vector_unit.data_type
@@ -92,12 +91,21 @@ class GeLU(Operator):
            / pcb_module.compute_module.clock_freq
         )
 
+        compute_cycle_count = 0
+        io_cycle_count = 0
+
         if 'collect' in ops_name:
+            # Since both Load and Alloc tiles must exist in SRAM simultaneously,
+            # the size of a single tile (tile_M * N * word_size) must be <= half (1/2) of the SRAM.
+            # Since N=2 is passed in the function calls below, we set the denominator to 4 to adjust the size properly.
+            max_elements_in_sram = pcb_module.compute_module.core.SRAM_size // (4 * data_type.word_size)
+            tile_M = min(M, max_elements_in_sram)
+            
             tile.collect_tile(
-                M, 2, -1, M, 2, -1, pcb_module, ops_name, -1
+                tile_M, 2, -1, tile_M, 2, -1, pcb_module, ops_name, -1
             )
             tile.collect_alloc_tile(
-                M, 2, -1, M, 2, -1, pcb_module, ops_name
+                tile_M, 2, -1, tile_M, 2, -1, pcb_module, ops_name
             )
 
         else:
@@ -164,7 +172,6 @@ class GeLU(Operator):
             end = time.time()
             assert output.shape == input.shape
             latencies.append(end - start)
-        # print(latencies)
         self.latency_on_gpu = statistics.median(latencies)
         return self.latency_on_gpu
 
@@ -183,6 +190,5 @@ class GeLU(Operator):
             end = time.time()
             latencies.append(end - start)
         avg_overhead = statistics.median(latencies)
-        # print('GPU kernel launch overhead: ', avg_overhead*1e3, 'ms')
         print(latencies)
         return avg_overhead

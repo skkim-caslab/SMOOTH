@@ -1,6 +1,7 @@
 #!/bin/bash
 
 POLICY_LIST=("smooth" "smooth-er" "capuchin" "gemmini" "compiler-ideal")
+#POLICY_LIST=("capuchin")
 MODEL_LIST=(
     gemma_2_2b_quant gemma_2_2b gpt_neo_quant gpt_neo
     llama2_quant llama2 tiny_llama_quant gpt_xl_quant
@@ -16,8 +17,8 @@ NUM_CORES=15
 for POLICY in "${POLICY_LIST[@]}"; do
 # 1. get data for figure14 & figure16
     for FILE_NAME in "${MODEL_LIST[@]}"; do
-#        echo "python run_decode_master.py $FILE_NAME -64 1 $POLICY"
-        echo "python run_decode_master.py $FILE_NAME -1024 1 $POLICY"
+        echo "python run_decode_master.py $FILE_NAME -64 1 $POLICY"
+#        echo "python run_decode_master.py $FILE_NAME -512 1 $POLICY"
 #        echo "python run_decode_master.py $FILE_NAME 32768 $ROOFTOP_INTERVAL $POLICY"
     done
 # 2. get data for figure20

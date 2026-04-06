@@ -293,10 +293,18 @@ def load_tile_to_sram_cont(
                             loadable_amount = 0
                         else:
                             status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
+                            # Find the corresponding tile (data[0][0]) in sram_status and extend the block list
+                            for tile in sram_status:
+                                if tile[0] == data[0][0]:
+                                    tile[1].extend(allocated_blocks) # Use extend() instead of append()
+                                    tile[2] = status_flag            # Apply the calculated status_flag instead of unconditionally setting it to 1
+                                    break
+                            else:
+                                # If the tile does not exist in sram_status, add it as a new entry
+                                sram_status.append([data[0][0], allocated_blocks, status_flag])
                             sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
                             data[0][1] -= len(allocated_blocks) * block_size
                             data[0][1] = max(data[0][1], 0)
-                            #sram_status.append([data[0][0], allocated_blocks, 1])
                             for block in allocated_blocks:
                                 sram_table[block] = 1
                             sram_status = sort_sram_status(sram_status)

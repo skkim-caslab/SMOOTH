@@ -1121,7 +1121,8 @@ class Matmul(Operator):
                 is_loaded, needed_tile = sram.check_needed_tile_loaded(sram_status, m, n, k, ops_name)
                 write_or_free_ended = False
                 unhided_io_amount = 0
-
+                print("which tile:", m, n, k, ops_name)
+                print("sram status", sram_status)
                 while(is_loaded == False):
                     loadable_amount = chiplet_module.compute_module.core.SRAM_size
                     remained_amount = loadable_amount

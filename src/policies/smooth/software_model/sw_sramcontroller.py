@@ -84,6 +84,7 @@ def update_longest_zero(sram_table: list):
     longest_zero_length = max_zero_length
     return 104 # find_zero overhead
 
+
 def addr_decider(sram_table: list, needed_blocks: int):
     """Use the longest cached consecutive zeros, or search anew if necessary."""
     global longest_zero_start, longest_zero_length
@@ -95,26 +96,35 @@ def addr_decider(sram_table: list, needed_blocks: int):
         print("Needed blocks < 0, ", needed_blocks)
         assert False
     if needed_blocks < 1:
-        #return allocated_blocks
         return allocated_blocks, find_zero_overhead
 
     # Check cached section
     if longest_zero_start is not None and longest_zero_length >= needed_blocks:
         # Allocate necessary blocks in cached section
         allocated_blocks = list(range(longest_zero_start, longest_zero_start + needed_blocks))
-        # update cache
+        # Update cache
         longest_zero_start += needed_blocks
         longest_zero_length -= needed_blocks
-    else:
-        # If there is no cached section or it is not sufficient, search again
-        find_zero_overhead = update_longest_zero(sram_table)
-        if longest_zero_length >= needed_blocks:
-            allocated_blocks = list(range(longest_zero_start, longest_zero_start + needed_blocks))
-            longest_zero_start += needed_blocks
-            longest_zero_length -= needed_blocks
+        return allocated_blocks, find_zero_overhead # Early exit
 
+    # If there is no cached section or it is not sufficient, search again
+    find_zero_overhead = update_longest_zero(sram_table)
+    
+    if longest_zero_length >= needed_blocks:
+        allocated_blocks = list(range(longest_zero_start, longest_zero_start + needed_blocks))
+        longest_zero_start += needed_blocks
+        longest_zero_length -= needed_blocks
+    elif longest_zero_length > 0:
+        # Allocate the remaining longest consecutive zero interval first to prevent fragmentation deadlock, even if it is less than the needed blocks.
+        allocated_blocks = list(range(longest_zero_start, longest_zero_start + longest_zero_length))
+        # Clear the cache since all available cached space has been consumed.
+        longest_zero_start = None
+        longest_zero_length = 0
+
+    if find_zero_overhead != 0:
+        print("SKKIM OVERHEAD FIND ZERO")
+        
     return allocated_blocks, find_zero_overhead
-
 
 def load_sram_status(pcb_module):
     block_size = pcb_module.compute_module.core.block_size
@@ -282,7 +292,16 @@ def load_tile_to_sram_cont(
                             loadable_amount = 0
                         else:
                             status_flag = 1 if len(allocated_blocks) == needed_blocks else 0
-                            sram_status.append([data[0][0], allocated_blocks, status_flag]) # Add Alloc tile
+                            # Find the corresponding tile (data[0][0]) in sram_status and extend the block list
+                            for tile in sram_status:
+                                if tile[0] == data[0][0]:
+                                    tile[1].extend(allocated_blocks) # Use extend() instead of append()
+                                    tile[2] = status_flag            # Apply the calculated status_flag instead of unconditionally setting it to 1
+                                    break
+                            else:
+                                # If the tile does not exist in sram_status, add it as a new entry
+                                sram_status.append([data[0][0], allocated_blocks, status_flag])
+
                             data[0][1] -= len(allocated_blocks) * block_size
                             data[0][1] = max(data[0][1], 0)
                             for block in allocated_blocks:

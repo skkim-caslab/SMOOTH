@@ -347,8 +347,8 @@ def generate_plot(base_dir, max_seq_len):
         ax2.set_ylim(0, ymax if not (math.isnan(ymax) or ymax == 0) else 100)
         ax2.set_yticks(np.linspace(0, ymax_val, 3))
 
-        ax.set_ylim(0, 80) 
-        ax.set_yticks([0, 40, 80])
+#        ax.set_ylim(0, 80) 
+#        ax.set_yticks([0, 40, 80])
 
         ax.set_title(f"({chr(97+i)}) {model_label}", fontsize=20, y=-0.73)
 
