@@ -1116,6 +1116,7 @@ def flash_attention_write(
 
     tmp_sram_status = []
     used_amount = 0
+    prev_ops_name += "_"
 
     # Remove `alloc` tile used in previous operation (`prev_ops_name`)
     for item in sram_status:

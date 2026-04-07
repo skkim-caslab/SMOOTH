@@ -305,7 +305,6 @@ def load_tile_to_sram_cont(
                                 #return 0, sram_status, sram_table, tot_find_overhead
                                 return 0, sram_status, sram_table, orig_loadable
 
-                            #print("SRAM:", sram_status)
 
 
                 else: # Only part of it can be assigned
@@ -1095,7 +1094,6 @@ def check_needed_tile_loaded(
                             lookup_len.append("FRAG")
         print("SKKIM OVERHEAD LOOKUP",lookup_len)
 
-#    print("final need tile:", needed_tile)
     return  is_loaded, needed_tile
 
 def flash_attention_write(
@@ -1124,6 +1122,7 @@ def flash_attention_write(
 
     tmp_sram_status = []
     used_amount = 0
+    prev_ops_name +="_"
 
     # Remove `alloc` tile used in previous operation (`prev_ops_name`)
     for item in sram_status:

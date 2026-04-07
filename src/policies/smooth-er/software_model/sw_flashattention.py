@@ -1236,6 +1236,7 @@ class FlashAttention(Operator):
                     raise Exception('Input_word_size and output_word_size is not same!!! Correcting below code is needed')
 
                 is_loaded, needed_tile = sram.flashattention_check_needed_tile(sram_status, ops_name)
+
                 write_or_free_ended = False
                 unhided_io_amount = 0
 
@@ -1335,7 +1336,6 @@ class FlashAttention(Operator):
 
             sram.store_sram_status(sram_status, sram_table)
             skkim_total_cycle_count = total_unhided_io_cycle_count + total_compute_cycle_count
-            print('total_io_cycle_count : ', total_io_cycle_count)
 
             return (
                 total_unhided_io_cycle_count,

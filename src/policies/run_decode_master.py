@@ -77,7 +77,7 @@ POLICY_NAME = sys.argv[4] if len(sys.argv) > 4 else "smooth"
 
 if TARGET_LEN in [1, -64]:
     DIR_NAME = "seq_1"
-elif TARGET_LEN in [32768, -1024]:
+elif TARGET_LEN in [32768, -512, -1024]:
     DIR_NAME = "seq_32K"
 else:
     DIR_NAME = "seq_default"
