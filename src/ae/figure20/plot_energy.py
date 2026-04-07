@@ -302,23 +302,64 @@ plt.savefig('energy_8MB.eps', format='eps', dpi=300, bbox_inches='tight')
 print("Energy comparison plot saved as: energy_8MB.eps")
 
 # =============================================================================
-# 5. Print Experimental Results (Energy)
+# 5. Print Experimental Results (Detailed Energy & Reduction Analysis)
 # =============================================================================
-print("\n" + "="*60)
-print(" Experimental Energy Results (Joules)")
-print("="*60)
+print("\n" + "="*80)
+print(" EXPERIMENTAL ENERGY ANALYSIS RESULTS")
+print("="*80)
+
+# Dictionary to store the best reduction for each output length per baseline
+best_reductions = {pol: {} for pol in ['compiler-ideal', 'gemmini', 'capuchin']}
 
 for out_len in output_lengths:
     print(f"\n[ Output Length: {out_len} Token ]")
     
+    # 1. Print baseline energies
     for pol in ['compiler-ideal', 'gemmini', 'capuchin']:
         val = energy_data[out_len][pol]
         print(f"  - {policy_labels[pol]:<16}: {val:.6f} J")
         
-    print(f"  - {policy_labels['smooth-er']} (Base Energy + Overhead = Total):")
+    # 2. Find the optimal (minimum energy) block size for SMOOTH-ER
+    smooth_totals = []
     for idx, bs in enumerate(block_sizes):
-        base_nrg = energy_data[out_len]['smooth-er'][idx]
-        ov_nrg = overhead_energy_data[out_len][idx]
-        total_nrg = base_nrg + ov_nrg
-        print(f"      {block_str_map[bs]:>4}B : {base_nrg:.6f} J  +  {ov_nrg:.2e} J  =  {total_nrg:.6f} J")
+        total = energy_data[out_len]['smooth-er'][idx] + overhead_energy_data[out_len][idx]
+        smooth_totals.append(total)
+    
+    min_smooth_energy = min(smooth_totals)
+    optimal_bs_idx = smooth_totals.index(min_smooth_energy)
+    optimal_bs_name = block_str_map[block_sizes[optimal_bs_idx]]
 
+    print(f"  - {policy_labels['smooth-er']} (Optimal: {optimal_bs_name}B): {min_smooth_energy:.6f} J")
+    print(f"      (Hardware Overhead: {overhead_energy_data[out_len][optimal_bs_idx] * 1e9:.2f} nJ)")
+
+    # 3. Calculate and store reductions for this specific sequence length
+    for pol in ['compiler-ideal', 'gemmini', 'capuchin']:
+        baseline = energy_data[out_len][pol]
+        if baseline > 0:
+            reduction = (baseline - min_smooth_energy) / baseline * 100
+            best_reductions[pol][out_len] = reduction
+
+# --- Summary Statistics: Matching the Narrative ---
+print("\n" + "="*80)
+print(" SUMMARY OF KEY METRICS")
+print("="*80)
+
+# Overall Average Reduction (assuming optimal block size for each length)
+print("1. OVERALL AVERAGE REDUCTION (Optimal Block Size):")
+for pol in ['compiler-ideal', 'gemmini', 'capuchin']:
+    avg_red = np.mean(list(best_reductions[pol].values()))
+    print(f"   - vs {policy_labels[pol]:<15}: {avg_red:.1f}%")
+
+# Scaling Trend Analysis (Comparison between 1K and 32K)
+print("\n2. SCALING EFFICIENCY (1K -> 32K):")
+for pol in ['compiler-ideal', 'gemmini']:
+    start_red = best_reductions[pol].get('1K', 0)
+    end_red = best_reductions[pol].get('32K', 0)
+    print(f"   - vs {policy_labels[pol]:<15}: Scales from {start_red:.1f}% (1K) to {end_red:.1f}% (32K)")
+
+# Overhead Metric
+max_overhead_nj = max([max(ov_list) for ov_list in overhead_energy_data.values()]) * 1e9
+print(f"\n3. HARDWARE OVERHEAD:")
+print(f"   - Peak Module Overhead: {max_overhead_nj:.2f} nJ")
+
+print("="*80)
