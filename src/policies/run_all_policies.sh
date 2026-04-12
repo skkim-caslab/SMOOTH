@@ -1,7 +1,6 @@
 #!/bin/bash
 
-#POLICY_LIST=("smooth" "smooth-er" "capuchin" "gemmini" "compiler-ideal")
-POLICY_LIST=("smooth-er" "capuchin")
+POLICY_LIST=("smooth" "smooth-er" "capuchin" "gemmini" "compiler-ideal")
 
 MODEL_LIST=(
     gemma_2_2b_quant gemma_2_2b gpt_neo_quant gpt_neo

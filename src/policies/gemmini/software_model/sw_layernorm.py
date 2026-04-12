@@ -31,6 +31,11 @@ class LayerNorm(Operator):
         )
         return input
 
+    @staticmethod
+    def generate_tile_loops(loop_M: int):
+        for m in range(loop_M):
+            yield m, 0, 0 
+
     def roofline_model(self, pcb_module: Device):
         self.io_count = self.M * self.N * self.data_type.word_size * 2
         self.flop_count = self.M * self.N * 7
@@ -200,44 +205,73 @@ class LayerNorm(Operator):
             l1_tile_M = mapping.l1_tile_M
             l1_tile_N = mapping.l1_tile_N
 
-            l1_tile = LayerNorm.L1TileSimulator(
-                l1_tile_M,
-                l1_tile_N,
-                data_type,
-                mapping,
-                pcb_module,
-            )
-            l1_tile_count = ceil(M / l1_tile_M) * ceil(N / l1_tile_N)
-            l1_tile_cycle_count = (
-                l1_tile.read_cycle_count * 3
-                + l1_tile.write_cycle_count
-                + l1_tile.compute_cycle_count
-            )
+            # Divide the M dimension into blocks of L1 tile size
+            M_tiles = ceil(M / l1_tile_M)
+            N_tiles = ceil(N / l1_tile_N)
 
-            skkim_read_cycle_count = l1_tile.read_cycle_count * 3
-            skkim_compute_cycle_count = l1_tile.compute_cycle_count
-            skkim_write_cycle_count = l1_tile.write_cycle_count
+            total_cycle_count = 0
+            skkim_read_cycle_count_total = 0
+            skkim_compute_cycle_count_total = 0
+            skkim_write_cycle_count_total = 0
 
-            total_cycle_count = (
-                ceil(l1_tile_count / pcb_module.compute_module.core_count)
-            ) * (
-                l1_tile_cycle_count
-                + (ceil(N / l1_tile_N) - 1) * (l1_tile.reduction_cycle_count)
-            )
-            #skkim: can optimize with hiding skkim_read_cycle_count
-            sram_usage = M * N * data_type.word_size * 3 + M * N * data_type.word_size
+            # Iterate over the M tiles and perform block-wise operations (similar structure to compiler/layernorm.py)
+            for m in range(M_tiles):
+                # Apply the remaining M size (M_remain) for the last tile
+                current_M = l1_tile_M if (m < M_tiles - 1 or M % l1_tile_M == 0) else M % l1_tile_M
+
+                # Instantiate L1TileSimulator with the current block size (current_M)
+                current_l1_tile = LayerNorm.L1TileSimulator(
+                    current_M,
+                    l1_tile_N,
+                    data_type,
+                    mapping,
+                    pcb_module,
+                )
+                
+                # Cycles for the current block
+                current_read_cycle = current_l1_tile.read_cycle_count * 3
+                current_compute_cycle = current_l1_tile.compute_cycle_count
+                current_write_cycle = current_l1_tile.write_cycle_count
+
+                l1_tile_cycle_count = current_read_cycle + current_write_cycle + current_compute_cycle
+
+                # Add reduction cycles based on N partitioning and apply core parallelism (core_count)
+                block_cycle_count = (
+                    ceil(N_tiles / pcb_module.compute_module.core_count)
+                ) * (
+                    l1_tile_cycle_count
+                    + (N_tiles - 1) * current_l1_tile.reduction_cycle_count
+                )
+
+                # Accumulate the current block cycles into the total cycles
+                total_cycle_count += block_cycle_count
+                skkim_read_cycle_count_total += current_read_cycle * N_tiles
+                skkim_compute_cycle_count_total += current_compute_cycle * N_tiles
+                skkim_write_cycle_count_total += current_write_cycle * N_tiles
+
+            # skkim: can optimize with hiding skkim_read_cycle_count
+            # Optimize SRAM occupancy based on the block maximum size, since processing is done in blocks (l1_tile_M) rather than the entire M
+            sram_usage = l1_tile_M * N * data_type.word_size * 3 + l1_tile_M * N * data_type.word_size
+            
             print("total cycle(X) : ",  total_cycle_count)
-            print("compute cycle(X1) : ", skkim_compute_cycle_count)
-            print("VE cycle(X1) : ", skkim_compute_cycle_count)
-            print("io cycle(X2) : ", skkim_read_cycle_count + skkim_write_cycle_count)
+            print("compute cycle(X1) : ", skkim_compute_cycle_count_total)
+            print("VE cycle(X1) : ", skkim_compute_cycle_count_total)
+            print("io cycle(X2) : ", skkim_read_cycle_count_total + skkim_write_cycle_count_total)
             print("current cycle(X3) : ",  total_cycle_count)
-            loadable_amount =  total_cycle_count-(skkim_read_cycle_count + skkim_write_cycle_count)
+            
+            loadable_amount =  total_cycle_count - (skkim_read_cycle_count_total + skkim_write_cycle_count_total)
             if loadable_amount != 0:
                 print("loadable cycle(X4) : ", loadable_amount)
+                
             print("sram occupancy[%](Y2) : ",  sram_usage / pcb_module.compute_module.core.SRAM_size * 100)
-            print("memory bw util[%](Y1) : ",  (skkim_read_cycle_count + skkim_write_cycle_count)/total_cycle_count*100)
-            return total_cycle_count
+            
+            # Prevent division by zero error
+            if total_cycle_count > 0:
+                print("memory bw util[%](Y1) : ",  (skkim_read_cycle_count_total + skkim_write_cycle_count_total) / total_cycle_count * 100)
+            else:
+                print("memory bw util[%](Y1) : 0.0")
 
+            return total_cycle_count
     class L1TileSimulator:
         def __init__(
             self,

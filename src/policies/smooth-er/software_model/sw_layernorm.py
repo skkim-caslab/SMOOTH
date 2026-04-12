@@ -268,22 +268,6 @@ class LayerNorm(Operator):
 
             return total_cycle_count
 
-            tile.collect_tile(
-                M, N, -1, l1_tile_M, l1_tile_N, -1, pcb_module, ops_name[:3] + '_mean_collect', -1
-            )
-            tile.collect_alloc_tile(
-                M, N, -1, l1_tile_M, l1_tile_N, -1, pcb_module, ops_name
-            )
-            tile.collect_tile(
-                M, N, -1, l1_tile_M, l1_tile_N, -1, pcb_module, ops_name[:3] + '_var_collect', -1
-            )
-            tile.collect_tile(
-                M, N, -1, l1_tile_M, l1_tile_N, -1, pcb_module, ops_name[:3] + '_norm_collect', -1
-            )
-
-
-            return total_cycle_count
-
         def simulate_l2_tile_compute_cycle_count(
             self,
             M: int,
