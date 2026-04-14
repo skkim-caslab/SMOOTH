@@ -1,4 +1,3 @@
-```markdown
 # SMOOTH: Hardware-Assisted Fine-Grained On-Chip Memory Management for Efficient On-Device LLM Inference
 
 This repository contains the official implementation of **SMOOTH**, a hardware-assisted on-chip memory management framework designed to maximize memory bandwidth utilization for on-device LLM inference. SMOOTH introduces a fine-grained block-based memory system and a hardware-driven early reclamation mechanism, significantly reducing Time-to-First-Token (TTFT) and Time-to-Last-Token (TTLT) on memory-constrained mobile SoCs.
