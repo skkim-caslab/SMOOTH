@@ -11,38 +11,21 @@ SMOOTH relies on the cycle-accurate simulator [LLMCompass](https://github.com/Pr
 For your convenience, the **[ASAP7](https://github.com/The-OpenROAD-Project/asap7)** predictive 7nm standard cell library is **already included in this repository** to ensure out-of-the-box hardware synthesis and overhead evaluation.
 
 ### 1.1. Docker Environment (For Artifact Evaluation)
-To guarantee strict reproducibility of the hardware synthesis environment and avoid any system-level library conflicts (e.g., `glibc`, `libreadline`, `libffi`), **we strongly recommend using our provided Docker setup.**
+To guarantee strict reproducibility of the legacy hardware synthesis environment and avoid any system-level library conflicts (e.g., `glibc`, `libreadline`), **we strongly recommend using our provided Docker setup.**
 
-Create a `Dockerfile` in the root directory of this repository with the following content:
+A `Dockerfile` is already included in the root directory of this repository. Run the following commands in your host machine's terminal to build the image and start the container. 
 
-```dockerfile
-# Base Image: Ubuntu 22.04 (Ensures compatibility with required GLIBC and libffi8)
-FROM ubuntu:22.04
+**Note: All subsequent steps (Sections 2-6) should be executed inside this Docker container.**
 
-ENV DEBIAN_FRONTEND=noninteractive
+```bash
+# 1. Build the Docker image
+docker build -t isca2026_smooth_ae .
 
-# Install essential libraries, synthesis dependencies, and Python 3
-RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    libtcl8.6 \
-    libreadline8 \
-    libffi8 \
-    tcl-dev \
-    zlib1g \
-    make gcc g++ bc \
-    wget git vim \
-    python3 python3-pip \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python packages required for data processing and plotting
-RUN pip3 install matplotlib numpy pandas
-
-# Set workspace environment
-ENV SMOOTH_HOME=/workspace/SMOOTH
-WORKDIR /workspace/SMOOTH
-
-CMD ["/bin/bash"]
+# 2. Run the container and mount the SMOOTH repository
+docker run -it --rm --name smooth_ae_env -v $(pwd):/workspace/SMOOTH isca2026_smooth_ae
 ```
+
+---
 
 ### 1.2. Build and Run the Container
 Run the following commands in your host machine's terminal to build the image and start the container. **All subsequent steps (Sections 2-6) should be executed inside this Docker container.**
