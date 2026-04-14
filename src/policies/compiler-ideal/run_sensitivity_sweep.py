@@ -110,7 +110,7 @@ def run_single_simulation(args):
 
         cmd = [
 #            "taskset", "-c", "6-47",
-            "python", "simulate.py",
+            "python3", "simulate.py",
             str(SEQ_LEN),
             json_path,
             str(dim),

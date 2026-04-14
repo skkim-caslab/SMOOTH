@@ -54,7 +54,7 @@ if TARGET_LEN == 0:
             print(f"Skipping (Already exists): {target_file}")
             return
 
-        cmd = ["python", "simulate.py", str(OUTPUT_LEN), json_path, str(dim), str(head), str(BLOCK_SIZE)]
+        cmd = ["python3", "simulate.py", str(OUTPUT_LEN), json_path, str(dim), str(head), str(BLOCK_SIZE)]
         print(f"[Energy Mode] Running: {' '.join(cmd)} > {target_file}")
         
         try:
@@ -101,10 +101,10 @@ def run_simulation(seq_len, init_flag=False):
         if seq_len == 0:
             json_path = "./Tiles/test_tile/double_512_MN_large.json"
             prompt_len = PROMPT_LEN
-            cmd = ["python", "simulate.py", str(prompt_len), json_path, str(dim), str(head), "--init"]
+            cmd = ["python3", "simulate.py", str(prompt_len), json_path, str(dim), str(head), "--init"]
         else:
             json_path = DEFAULT_JSON_PATH
-            cmd = ["python", "simulate.py", str(seq_len), json_path, str(dim), str(head)]
+            cmd = ["python3", "simulate.py", str(seq_len), json_path, str(dim), str(head)]
 
         print(cmd)
         result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=POLICY_NAME)
