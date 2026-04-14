@@ -16,7 +16,6 @@ To guarantee strict reproducibility of the legacy hardware synthesis environment
 A `Dockerfile` is already included in the root directory of this repository. Run the following commands in your host machine's terminal to build the image and start the container. 
 
 **Note: All subsequent steps (Sections 2-6) should be executed inside this Docker container.**
-<<<<<<< HEAD
 
 ```bash
 # 1. Build the Docker image
