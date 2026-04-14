@@ -298,8 +298,8 @@ by_label = dict(zip(labels, handles))
 fig.legend(by_label.values(), by_label.keys(), loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=5, frameon=False)
 
 plt.tight_layout()
-plt.savefig('energy_8MB.eps', format='eps', dpi=300, bbox_inches='tight')
-print("Energy comparison plot saved as: energy_8MB.eps")
+plt.savefig('energy_8MB.png', dpi=300, bbox_inches='tight')
+print("Energy comparison plot saved as: energy_8MB.png")
 
 # =============================================================================
 # 5. Print Experimental Results (Detailed Energy & Reduction Analysis)
