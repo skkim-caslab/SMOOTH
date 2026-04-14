@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. Install Python packages required for AE paper plotting and data processing
-RUN pip3 install matplotlib numpy pandas
+RUN pip3 install matplotlib numpy pandas torch scalesim==2.0.2
 
 # 4. Set environment variables and working directory
 ENV SMOOTH_HOME=/workspace/SMOOTH
