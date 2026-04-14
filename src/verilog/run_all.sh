@@ -6,7 +6,7 @@ for d in "${dirs[@]}"; do
     echo "===== Running in $d ====="
     (
         cd "$d" || exit
-        yosys -s synth_${d}.ys
-        sta -exit sta.tcl
+        ../yosys -s synth_${d}.ys
+        ../sta -exit sta.tcl
     )
 done

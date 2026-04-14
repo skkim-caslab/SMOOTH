@@ -1,25 +1,62 @@
+```markdown
 # SMOOTH: Hardware-Assisted Fine-Grained On-Chip Memory Management for Efficient On-Device LLM Inference
 
 This repository contains the official implementation of **SMOOTH**, a hardware-assisted on-chip memory management framework designed to maximize memory bandwidth utilization for on-device LLM inference. SMOOTH introduces a fine-grained block-based memory system and a hardware-driven early reclamation mechanism, significantly reducing Time-to-First-Token (TTFT) and Time-to-Last-Token (TTLT) on memory-constrained mobile SoCs.
 
 This paper is submitted to **ISCA 2026**.
 
-## 1. Environment Setup
+## 1. Environment Setup (Docker Recommended)
 
-SMOOTH relies on the cycle-accurate simulator [LLMCompass](https://github.com/PrincetonUniversity/LLMCompass) for architectural simulation, [Yosys](https://github.com/YosysHQ/yosys) for hardware logic synthesis, and [OpenSTA](https://github.com/The-OpenROAD-Project/OpenSTA) for static timing analysis.
+SMOOTH relies on the cycle-accurate simulator [LLMCompass](https://github.com/PrincetonUniversity/LLMCompass) for architectural simulation, [Yosys](https://github.com/YosysHQ/yosys) for hardware logic synthesis, and [OpenSTA](https://github.com/The-OpenROAD-Project/OpenSTA) for static timing analysis. 
 
 For your convenience, the **[ASAP7](https://github.com/The-OpenROAD-Project/asap7)** predictive 7nm standard cell library is **already included in this repository** to ensure out-of-the-box hardware synthesis and overhead evaluation.
 
-Please follow the installation guides in their respective official repositories to prepare your environment:
-* **[LLMCompass](https://github.com/PrincetonUniversity/LLMCompass)**: For cycle-accurate LLM inference simulation.
-* **[Yosys](https://github.com/YosysHQ/yosys)**: For synthesizing hardware modules and extracting microarchitectural overheads.
-* **[OpenSTA](https://github.com/The-OpenROAD-Project/OpenSTA)**: Install OpenSTA on your system (e.g., via package manager or source) to enable static timing analysis.
-* **[ASAP7](https://github.com/The-OpenROAD-Project/asap7)**: A 7nm predictive process design kit (PDK) used alongside Yosys to evaluate realistic hardware overheads.
+### 1.1. Docker Environment (For Artifact Evaluation)
+To guarantee strict reproducibility of the hardware synthesis environment and avoid any system-level library conflicts (e.g., `glibc`, `libreadline`, `libffi`), **we strongly recommend using our provided Docker setup.**
 
-Before running the experiments, set the `SMOOTH_HOME` environment variable to the root directory of this repository:
-```bash
-export SMOOTH_HOME=/path/to/your/SMOOTH
+Create a `Dockerfile` in the root directory of this repository with the following content:
+
+```dockerfile
+# Base Image: Ubuntu 22.04 (Ensures compatibility with required GLIBC and libffi8)
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install essential libraries, synthesis dependencies, and Python 3
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    libtcl8.6 \
+    libreadline8 \
+    libffi8 \
+    tcl-dev \
+    zlib1g \
+    make gcc g++ bc \
+    wget git vim \
+    python3 python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages required for data processing and plotting
+RUN pip3 install matplotlib numpy pandas
+
+# Set workspace environment
+ENV SMOOTH_HOME=/workspace/SMOOTH
+WORKDIR /workspace/SMOOTH
+
+CMD ["/bin/bash"]
 ```
+
+### 1.2. Build and Run the Container
+Run the following commands in your host machine's terminal to build the image and start the container. **All subsequent steps (Sections 2-6) should be executed inside this Docker container.**
+
+```bash
+# 1. Build the Docker image
+docker build -t isca2026_smooth_ae .
+
+# 2. Run the container and mount the SMOOTH repository
+docker run -it --rm --name smooth_ae_env -v $(pwd):/workspace/SMOOTH isca2026_smooth_ae
+```
+
+---
 
 ## 2. Data Generation
 
@@ -37,14 +74,14 @@ Run the following scripts to plot the TTFT and TTLT latency evaluation figures. 
 **Figure 14: Normalized Time-to-First-Token (TTFT)**
 ```bash
 cd $SMOOTH_HOME/src/ae/figure14
-python plot_ttft.py ../../../data/seq_1/8MB
+python3 plot_ttft.py ../../../data/seq_1/8MB
 # Output generated: src/ae/figure14/TTFT_8MB.eps
 ```
 
 **Figure 16: End-to-End Latency (TTLT)**
 ```bash
 cd $SMOOTH_HOME/src/ae/figure16
-python plot_latency.py ../../../data/seq_32K/8MB
+python3 plot_latency.py ../../../data/seq_32K/8MB
 # Output generated: src/ae/figure16/latency_8MB.png
 ```
 
@@ -64,7 +101,7 @@ Plot the energy consumption evaluation across different inference strategies.
 **Figure 20: Energy Consumption for N-th Token Generation**
 ```bash
 cd $SMOOTH_HOME/src/ae/figure20
-python plot_energy.py
+python3 plot_energy.py
 # Output generated: src/ae/figure20/energy_8MB.eps
 ```
 
@@ -75,11 +112,11 @@ Extract the Area, Power, and Latency overhead results synthesized during Step 4 
 **Table 1: Area Overhead Estimates**
 ```bash
 cd $SMOOTH_HOME/src/ae/table1
-python get_area.py
+python3 get_area.py
 ```
 
 **Table 2: Latency and Power Consumption**
 ```bash
 cd $SMOOTH_HOME/src/ae/table2
-python get_power.py
+python3 get_power.py
 ```
