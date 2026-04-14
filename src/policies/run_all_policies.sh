@@ -41,16 +41,16 @@ echo "Directory validation complete."
 for POLICY in "${POLICY_LIST[@]}"; do
 # 1. get data for figure14 & figure16
     for FILE_NAME in "${MODEL_LIST[@]}"; do
-        echo "python run_decode_master.py $FILE_NAME -64 1 $POLICY"
-        echo "python run_decode_master.py $FILE_NAME -512 1 $POLICY"
-        echo "python run_decode_master.py $FILE_NAME 32768 $ROOFTOP_INTERVAL $POLICY"
+        echo "python3 run_decode_master.py $FILE_NAME -64 1 $POLICY"
+        echo "python3 run_decode_master.py $FILE_NAME -512 1 $POLICY"
+        echo "python3 run_decode_master.py $FILE_NAME 32768 $ROOFTOP_INTERVAL $POLICY"
     done
 done
 
 # 2. get data for figure20
 for OUT_LEN in "${OUTPUT_LENS[@]}"; do
     for BLK_SIZE in "${BLOCK_SIZES[@]}"; do
-        echo "python run_decode_master.py llama2_quant 0 $BLK_SIZE smooth-er $OUT_LEN"
+        echo "python3 run_decode_master.py llama2_quant 0 $BLK_SIZE smooth-er $OUT_LEN"
     done
 done
 
