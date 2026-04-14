@@ -232,8 +232,8 @@ def main():
                ncol=5, frameon=False, edgecolor='black', columnspacing=1.0)
 
     # Setup output directory and save the figure
-    output_path = f"{metric}_8MB.eps"
-    plt.savefig(output_path, format='eps', dpi=300, bbox_inches='tight')
+    output_path = f"{metric}_8MB.png"
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
 
     print(f"[Success] Data parsed and plot generated successfully -> {output_path}")
 
