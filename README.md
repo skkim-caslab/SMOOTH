@@ -16,6 +16,7 @@ To guarantee strict reproducibility of the legacy hardware synthesis environment
 A `Dockerfile` is already included in the root directory of this repository. Run the following commands in your host machine's terminal to build the image and start the container. 
 
 **Note: All subsequent steps (Sections 2-6) should be executed inside this Docker container.**
+<<<<<<< HEAD
 
 ```bash
 # 1. Build the Docker image
@@ -24,21 +25,6 @@ docker build -t isca2026_smooth_ae .
 # 2. Run the container and mount the SMOOTH repository
 docker run -it --rm --name smooth_ae_env -v $(pwd):/workspace/SMOOTH isca2026_smooth_ae
 ```
-
----
-
-### 1.2. Build and Run the Container
-Run the following commands in your host machine's terminal to build the image and start the container. **All subsequent steps (Sections 2-6) should be executed inside this Docker container.**
-
-```bash
-# 1. Build the Docker image
-docker build -t isca2026_smooth_ae .
-
-# 2. Run the container and mount the SMOOTH repository
-docker run -it --rm --name smooth_ae_env -v $(pwd):/workspace/SMOOTH isca2026_smooth_ae
-```
-
----
 
 ## 2. Data Generation
 
