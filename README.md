@@ -18,7 +18,7 @@ For your convenience, the **[ASAP7](https://github.com/The-OpenROAD-Project/asap
 - PyTorch
 
 > Using other versions of ScaleSim (e.g., 3.0.0) may result in configuration errors such as:
-> `configparser.NoOptionError: No option 'useramulatortrace'`
+> `NoOptionError: No option 'useramulatortrace'`
 
 ### 1.1. Docker Environment (For Artifact Evaluation)
 To guarantee strict reproducibility of the legacy hardware synthesis environment and avoid any system-level library conflicts (e.g., `glibc`, `libreadline`), **we strongly recommend using our provided Docker setup.**
@@ -37,7 +37,6 @@ docker run -it --rm --name smooth_ae_env -v $(pwd):/workspace/SMOOTH isca2026_sm
 
 > **Expected Runtime**
 > The full experiment may take approximately **~20 hours on a 48-core CPU**, depending on system configuration and workload.
-> A significant portion of the runtime comes from GPT-3 workloads.
 
 ---
 
