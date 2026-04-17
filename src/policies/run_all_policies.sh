@@ -1,5 +1,7 @@
 #!/bin/bash
 
+NUM_CORES=15
+
 POLICY_LIST=("smooth" "smooth-er" "capuchin" "gemmini" "compiler-ideal")
 
 MODEL_LIST=(
@@ -11,7 +13,6 @@ MODEL_LIST=(
 ROOFTOP_INTERVAL=512
 OUTPUT_LENS=(1025 8193 32769)
 BLOCK_SIZES=(256 512 1024 2048 4096)
-NUM_CORES=15
 
 # --- Ensure required directories exist for each policy ---
 echo "Validating directory structure..."

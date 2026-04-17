@@ -44,8 +44,12 @@ docker run -it --rm --name smooth_ae_env -v $(pwd):/workspace/SMOOTH isca2026_sm
 
 Generate the baseline and SMOOTH policy data required for the evaluations. This process simulates the execution to gather performance metrics.
 
+> **Tip: Adjusting Parallelism for Faster Execution**
+> By default, `run_all_policies.sh` is set to use 15 cores (`NUM_CORES=15`). You can open the script and adjust this variable to match the number of available CPU cores in your environment. Increasing this value will enhance parallelism and significantly reduce the total data generation time.
+
 ```bash
 cd $SMOOTH_HOME/src/policies
+# (Optional) Edit NUM_CORES in run_all_policies.sh before running
 bash run_all_policies.sh
 ```
 
