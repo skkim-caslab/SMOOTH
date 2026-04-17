@@ -340,10 +340,13 @@ class LayerNorm(Operator):
                     sram_status, sram_table, ops_name, loadable_amount, pcb_module
                 )
                 loadable_amount = remained_amount
-                while(loadable_amount != 0): # Cycle with compute_mean cycle
+                while(loadable_amount > 0): # Cycle with compute_mean cycle
+                    prev_loadable_amount = loadable_amount
                     loadable_amount, sram_status, sram_table, tot_find_overhead = sram.load_tile_to_sram(
                         sram_status, sram_table, pcb_module, loadable_amount 
                     )
+                    if loadable_amount == prev_loadable_amount:
+                        break
                 time_tick += current_l1_tile.compute_mean_cycle_count
                 print("total cycle(X) : ",  time_tick)
                 print("compute cycle(X1) : ", current_l1_tile.compute_mean_cycle_count)
@@ -383,10 +386,13 @@ class LayerNorm(Operator):
 
 
                 loadable_amount = current_l1_tile.compute_var_cycle_count * pcb_module.compute_module.l2_bandwidth_per_cycle / data_type.word_size
-                while(loadable_amount != 0): # Cycle with compute_var cycle
+                while(loadable_amount > 0): # Cycle with compute_var cycle
+                    prev_loadable_amount = loadable_amount
                     loadable_amount, sram_status, sram_table, tot_find_overhead = sram.load_tile_to_sram(
                         sram_status, sram_table, pcb_module, loadable_amount 
                     )
+                    if loadable_amount == prev_loadable_amount:
+                        break
                 time_tick += current_l1_tile.compute_var_cycle_count
                 print("total cycle(X) : ",  time_tick)
                 print("compute cycle(X1) : ", current_l1_tile.compute_var_cycle_count)
@@ -425,10 +431,13 @@ class LayerNorm(Operator):
                 print('memory bw util[%](Y1) : ',  100)
 
                 loadable_amount = current_l1_tile.compute_norm_cycle_count * pcb_module.compute_module.l2_bandwidth_per_cycle / data_type.word_size
-                while(loadable_amount != 0): # Cycle with compute_norm cycle
+                while(loadable_amount > 0): # Cycle with compute_norm cycle
+                    prev_loadable_amount = loadable_amount
                     loadable_amount, sram_status, sram_table, tot_find_overhead = sram.load_tile_to_sram(
                         sram_status, sram_table, pcb_module, loadable_amount 
                     )
+                    if loadable_amount == prev_loadable_amount:
+                        break
                 time_tick += current_l1_tile.compute_norm_cycle_count
                 print("total cycle(X) : ",  time_tick)
                 print("compute cycle(X1) : ", current_l1_tile.compute_norm_cycle_count)
